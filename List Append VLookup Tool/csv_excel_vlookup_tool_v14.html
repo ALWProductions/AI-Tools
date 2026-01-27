@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV/Excel VLOOKUP Append Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border: 1px solid #ddd;
+            padding: 30px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .privacy-notice {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 12px;
+            margin: 20px 0;
+            font-size: 13px;
+            color: #555;
+        }
+        .section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #fafafa;
+            border: 1px solid #ddd;
+        }
+        .section h2 {
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 16px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 6px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        input[type="file"], select {
+            width: 100%;
+            max-width: 500px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            background: white;
+            font-size: 14px;
+        }
+        .table-container {
+            overflow: auto;
+            margin-top: 12px;
+            max-height: 300px;
+            border: 1px solid #ddd;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+            min-width: 100px;
+        }
+        th {
+            background: #f0f0f0;
+            color: #333;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        th.highlight { background: #e0e0e0; }
+        td.highlight { background: #f5f5f5; }
+        .btn {
+            padding: 10px 20px;
+            border: 1px solid #333;
+            background: white;
+            color: #333;
+            font-weight: 600;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background: #333;
+            color: white;
+        }
+        .btn-primary {
+            background: #333;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #555;
+        }
+        .status {
+            margin-top: 12px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            font-size: 13px;
+        }
+        .status.success {
+            background: #f0f0f0;
+            border: 2px solid #333;
+        }
+        .status.error {
+            background: #fff;
+            border: 2px solid #333;
+            color: #d00;
+        }
+        .info {
+            display: inline-block;
+            margin-left: 12px;
+            padding: 4px 8px;
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            font-size: 12px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CSV/Excel VLOOKUP Append Tool</h1>
+        
+        <div class="privacy-notice">
+            <strong>Privacy Notice:</strong> This tool runs entirely in your browser. No data is uploaded to any server. All processing happens locally on your device.
+        </div>
+        
+        <div class="section">
+            <h2>1. Upload Main File</h2>
+            <label for="mainFile">Select your main CSV or Excel file:</label>
+            <input type="file" id="mainFile" accept=".csv,.xlsx,.xls">
+            <div id="mainStatus"></div>
+            <div id="mainTableContainer" class="table-container" style="display:none;">
+                <table id="mainTable"></table>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>2. Select Lookup Column</h2>
+            <label for="siteacronymColumn">Choose siteacronym column:</label>
+            <select id="siteacronymColumn" disabled>
+                <option value="">-- Upload file first --</option>
+            </select>
+            <span class="info" id="siteacronymCount" style="display:none;"></span>
+        </div>
+
+        <div class="section">
+            <h2>3. Upload Append Data File</h2>
+            <label for="appendFile">Select append data CSV or Excel file:</label>
+            <input type="file" id="appendFile" accept=".csv,.xlsx,.xls">
+            <div id="appendStatus"></div>
+            <div id="appendTableContainer" class="table-container" style="display:none;">
+                <table id="appendTable"></table>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>4. Execute VLOOKUP & Merge</h2>
+            <button class="btn btn-primary" onclick="executeVLOOKUP()">Execute VLOOKUP & Merge</button>
+            <div id="mergeStatus"></div>
+        </div>
+
+        <div class="section" id="resultSection" style="display:none;">
+            <h2>5. Download Result</h2>
+            <button class="btn btn-primary" onclick="downloadResult()">Download Merged CSV</button>
+            <div class="table-container">
+                <table id="resultTable"></table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mainData = [], mainHeaders = [], siteacronymColumn = '';
+        let appendData = [], appendHeaders = [], appendSiteacronymColumn = '';
+
+        function parseFile(file, callback) {
+            const fileName = file.name.toLowerCase();
+            if (fileName.endsWith('.csv')) {
+                Papa.parse(file, { complete: results => callback(results.data), skipEmptyLines: true });
+            } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+                    callback(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header: 1}));
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        function processData(data) {
+            if (data.length < 2) return null;
+            const headers = data[0].map(h => String(h).trim());
+            const rows = data.slice(1).map(row => {
+                const obj = {};
+                headers.forEach((h, i) => obj[h] = row[i] !== undefined ? String(row[i]).trim() : '');
+                return obj;
+            });
+            return { headers, rows };
+        }
+
+        function displayTable(tableId, headers, rows, highlightCol = null) {
+            const table = document.getElementById(tableId);
+            let html = '<thead><tr>';
+            headers.forEach(h => {
+                const cls = (highlightCol && h.toLowerCase() === highlightCol.toLowerCase()) ? 'highlight' : '';
+                html += `<th class="${cls}">${h}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            rows.slice(0, 100).forEach(row => {
+                html += '<tr>';
+                headers.forEach(h => {
+                    const cls = (highlightCol && h.toLowerCase() === highlightCol.toLowerCase()) ? 'highlight' : '';
+                    html += `<td class="${cls}">${row[h] || ''}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody>';
+            table.innerHTML = html;
+        }
+
+        function showStatus(id, msg, type) {
+            document.getElementById(id).innerHTML = `<div class="status ${type}">${msg}</div>`;
+        }
+
+        document.getElementById('mainFile').addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            parseFile(file, data => {
+                const result = processData(data);
+                if (!result) return showStatus('mainStatus', 'Invalid file format', 'error');
+                
+                mainHeaders = result.headers;
+                mainData = result.rows;
+                
+                showStatus('mainStatus', `Loaded ${mainData.length} rows, ${mainHeaders.length} columns`, 'success');
+                displayTable('mainTable', mainHeaders, mainData);
+                document.getElementById('mainTableContainer').style.display = 'block';
+                
+                const select = document.getElementById('siteacronymColumn');
+                select.innerHTML = '<option value="">-- Select column --</option>';
+                mainHeaders.forEach(h => {
+                    const opt = document.createElement('option');
+                    opt.value = h;
+                    opt.textContent = h;
+                    if (h.toLowerCase() === 'siteacronym' || h.toLowerCase() === 'acronym') opt.selected = true;
+                    select.appendChild(opt);
+                });
+                select.disabled = false;
+                
+                const autoCol = mainHeaders.find(h => h.toLowerCase() === 'siteacronym' || h.toLowerCase() === 'acronym');
+                if (autoCol) {
+                    siteacronymColumn = autoCol;
+                    updateSiteacronymCount();
+                }
+            });
+        });
+
+        document.getElementById('siteacronymColumn').addEventListener('change', e => {
+            siteacronymColumn = e.target.value;
+            updateSiteacronymCount();
+        });
+
+        function updateSiteacronymCount() {
+            if (!siteacronymColumn) return;
+            const unique = new Set(mainData.map(r => r[siteacronymColumn]).filter(Boolean));
+            const el = document.getElementById('siteacronymCount');
+            el.textContent = `${unique.size} unique values`;
+            el.style.display = 'inline-block';
+        }
+
+        document.getElementById('appendFile').addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            parseFile(file, data => {
+                const result = processData(data);
+                if (!result) return showStatus('appendStatus', 'Invalid file format', 'error');
+                
+                appendHeaders = result.headers;
+                appendSiteacronymColumn = appendHeaders.find(h => 
+                    h.toLowerCase() === 'siteacronym' || h.toLowerCase() === 'acronym'
+                );
+                
+                if (!appendSiteacronymColumn) {
+                    return showStatus('appendStatus', 'File must have "siteacronym" or "acronym" column', 'error');
+                }
+                
+                appendData = result.rows.filter(r => r[appendSiteacronymColumn]);
+                showStatus('appendStatus', `Loaded ${appendData.length} rows, ${appendHeaders.length} columns`, 'success');
+                displayTable('appendTable', appendHeaders, appendData, appendSiteacronymColumn);
+                document.getElementById('appendTableContainer').style.display = 'block';
+            });
+        });
+
+        function executeVLOOKUP() {
+            if (!mainData.length) return showStatus('mergeStatus', 'Upload main file first', 'error');
+            if (!siteacronymColumn) return showStatus('mergeStatus', 'Select siteacronym column', 'error');
+            if (!appendData.length) return showStatus('mergeStatus', 'Upload append data file', 'error');
+
+            const newHeaders = [...mainHeaders];
+            appendHeaders.forEach(h => {
+                if (h !== appendSiteacronymColumn && !newHeaders.includes(h)) newHeaders.push(h);
+            });
+
+            const appendMap = {};
+            appendData.forEach(r => {
+                if (r[appendSiteacronymColumn]) appendMap[r[appendSiteacronymColumn]] = r;
+            });
+
+            const merged = mainData.map(row => {
+                const newRow = {...row};
+                const key = row[siteacronymColumn];
+                if (key && appendMap[key]) {
+                    Object.keys(appendMap[key]).forEach(k => {
+                        if (k !== appendSiteacronymColumn) newRow[k] = appendMap[key][k];
+                    });
+                }
+                return newRow;
+            });
+
+            const matchCount = merged.filter(r => appendMap[r[siteacronymColumn]]).length;
+            const uniqueCount = new Set(merged.filter(r => appendMap[r[siteacronymColumn]]).map(r => r[siteacronymColumn])).size;
+
+            displayTable('resultTable', newHeaders, merged);
+            window.mergedData = merged;
+            window.mergedHeaders = newHeaders;
+            
+            showStatus('mergeStatus', `Merged ${matchCount} rows (${uniqueCount} unique siteacronyms), added ${appendHeaders.length - 1} fields`, 'success');
+            document.getElementById('resultSection').style.display = 'block';
+        }
+
+        function downloadResult() {
+            if (!window.mergedData) return alert('No data to download');
+            
+            const csv = [
+                window.mergedHeaders.join(','),
+                ...window.mergedData.map(row => 
+                    window.mergedHeaders.map(h => {
+                        const val = row[h] || '';
+                        return /[,"\n]/.test(val) ? `"${val.replace(/"/g, '""')}"` : val;
+                    }).join(',')
+                )
+            ].join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'merged_data.csv';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

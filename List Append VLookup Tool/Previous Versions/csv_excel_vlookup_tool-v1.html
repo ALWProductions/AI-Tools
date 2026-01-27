@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV/Excel VLOOKUP Append Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+        }
+        .section h2 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .file-input-group {
+            margin-bottom: 15px;
+        }
+        .file-input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #495057;
+            font-weight: 600;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+        }
+        .table-container {
+            overflow-x: auto;
+            margin-top: 15px;
+            max-height: 400px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #dee2e6;
+            min-width: 120px;
+        }
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        td input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .status {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+        .button-group {
+            margin-top: 15px;
+        }
+        .col-header-input {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CSV/Excel VLOOKUP Append Tool</h1>
+        <p class="subtitle">Upload your main file, add append data, and merge based on siteacronym</p>
+        
+        <div class="section">
+            <h2>1. Upload Main File (CSV/Excel)</h2>
+            <div class="file-input-group">
+                <label for="mainFile">Select your main CSV or Excel file:</label>
+                <input type="file" id="mainFile" accept=".csv,.xlsx,.xls">
+            </div>
+            <div id="mainStatus"></div>
+            <div id="mainTableContainer" class="table-container" style="display:none;">
+                <table id="mainTable"></table>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>2. Add Append Data</h2>
+            <p style="margin-bottom: 15px; color: #666;">Add rows and columns to create data to append to your main file.</p>
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="addAppendRow()">+ Add Row</button>
+                <button class="btn btn-primary" onclick="addAppendColumn()">+ Add Column</button>
+                <button class="btn btn-secondary" onclick="clearAppendTable()">Clear All</button>
+            </div>
+            <div class="table-container">
+                <table id="appendTable">
+                    <thead>
+                        <tr>
+                            <th><input type="text" class="col-header-input" value="siteacronym" readonly></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><input type="text" placeholder="Enter siteacronym"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>3. Execute VLOOKUP & Append</h2>
+            <button class="btn btn-success" onclick="executeVLOOKUP()">Execute VLOOKUP & Merge</button>
+            <div id="mergeStatus"></div>
+        </div>
+
+        <div class="section" id="resultSection" style="display:none;">
+            <h2>4. Merged Result</h2>
+            <button class="btn btn-success" onclick="downloadResult()">Download Merged CSV</button>
+            <div class="table-container">
+                <table id="resultTable"></table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mainData = [];
+        let mainHeaders = [];
+
+        document.getElementById('mainFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const fileName = file.name.toLowerCase();
+            
+            if (fileName.endsWith('.csv')) {
+                Papa.parse(file, {
+                    complete: function(results) {
+                        processMainData(results.data);
+                    },
+                    skipEmptyLines: true
+                });
+            } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+                    processMainData(jsonData);
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+
+        function processMainData(data) {
+            if (data.length < 2) {
+                showStatus('mainStatus', 'File must have headers and at least one row of data', 'error');
+                return;
+            }
+
+            mainHeaders = data[0].map(h => String(h).trim());
+            mainData = data.slice(1).map(row => {
+                const obj = {};
+                mainHeaders.forEach((header, i) => {
+                    obj[header] = row[i] !== undefined ? String(row[i]).trim() : '';
+                });
+                return obj;
+            });
+
+            if (!mainHeaders.includes('siteacronym')) {
+                showStatus('mainStatus', 'Warning: No "siteacronym" column found in main file', 'error');
+            } else {
+                showStatus('mainStatus', `Successfully loaded ${mainData.length} rows with ${mainHeaders.length} columns`, 'success');
+            }
+
+            displayMainTable();
+        }
+
+        function displayMainTable() {
+            const table = document.getElementById('mainTable');
+            const container = document.getElementById('mainTableContainer');
+            
+            let html = '<thead><tr>';
+            mainHeaders.forEach(h => {
+                html += `<th>${h}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            mainData.slice(0, 100).forEach(row => {
+                html += '<tr>';
+                mainHeaders.forEach(h => {
+                    html += `<td>${row[h] || ''}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody>';
+            
+            table.innerHTML = html;
+            container.style.display = 'block';
+        }
+
+        function addAppendRow() {
+            const tbody = document.getElementById('appendTable').getElementsByTagName('tbody')[0];
+            const headerRow = document.getElementById('appendTable').getElementsByTagName('thead')[0].rows[0];
+            const colCount = headerRow.cells.length;
+            
+            const newRow = tbody.insertRow();
+            for (let i = 0; i < colCount; i++) {
+                const cell = newRow.insertCell();
+                cell.innerHTML = '<input type="text" placeholder="Enter value">';
+            }
+        }
+
+        function addAppendColumn() {
+            const table = document.getElementById('appendTable');
+            const headerRow = table.getElementsByTagName('thead')[0].rows[0];
+            const tbody = table.getElementsByTagName('tbody')[0];
+            
+            const newHeader = headerRow.insertCell();
+            newHeader.innerHTML = '<input type="text" class="col-header-input" placeholder="New field name">';
+            
+            for (let i = 0; i < tbody.rows.length; i++) {
+                const cell = tbody.rows[i].insertCell();
+                cell.innerHTML = '<input type="text" placeholder="Enter value">';
+            }
+        }
+
+        function clearAppendTable() {
+            const table = document.getElementById('appendTable');
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th><input type="text" class="col-header-input" value="siteacronym" readonly></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="text" placeholder="Enter siteacronym"></td>
+                    </tr>
+                </tbody>
+            `;
+        }
+
+        function executeVLOOKUP() {
+            if (mainData.length === 0) {
+                showStatus('mergeStatus', 'Please upload a main file first', 'error');
+                return;
+            }
+
+            const appendData = getAppendData();
+            if (appendData.length === 0) {
+                showStatus('mergeStatus', 'No append data to process', 'error');
+                return;
+            }
+
+            const appendHeaders = getAppendHeaders();
+            if (!appendHeaders.includes('siteacronym')) {
+                showStatus('mergeStatus', 'Append data must have "siteacronym" column', 'error');
+                return;
+            }
+
+            const newHeaders = [...mainHeaders];
+            appendHeaders.forEach(h => {
+                if (!newHeaders.includes(h)) {
+                    newHeaders.push(h);
+                }
+            });
+
+            const mergedData = mainData.map(row => ({...row}));
+
+            const appendMap = {};
+            appendData.forEach(row => {
+                const key = row.siteacronym;
+                if (key) {
+                    appendMap[key] = row;
+                }
+            });
+
+            let matchCount = 0;
+            mergedData.forEach(row => {
+                const siteacronym = row.siteacronym;
+                if (siteacronym && appendMap[siteacronym]) {
+                    const appendRow = appendMap[siteacronym];
+                    Object.keys(appendRow).forEach(key => {
+                        if (key !== 'siteacronym') {
+                            row[key] = appendRow[key];
+                        }
+                    });
+                    matchCount++;
+                }
+            });
+
+            displayResultTable(mergedData, newHeaders);
+            showStatus('mergeStatus', `Successfully merged! ${matchCount} rows matched and updated.`, 'success');
+            document.getElementById('resultSection').style.display = 'block';
+        }
+
+        function getAppendHeaders() {
+            const headerRow = document.getElementById('appendTable').getElementsByTagName('thead')[0].rows[0];
+            const headers = [];
+            for (let i = 0; i < headerRow.cells.length; i++) {
+                const input = headerRow.cells[i].getElementsByTagName('input')[0];
+                const value = input.value.trim();
+                if (value) {
+                    headers.push(value);
+                }
+            }
+            return headers;
+        }
+
+        function getAppendData() {
+            const headers = getAppendHeaders();
+            const tbody = document.getElementById('appendTable').getElementsByTagName('tbody')[0];
+            const data = [];
+            
+            for (let i = 0; i < tbody.rows.length; i++) {
+                const row = tbody.rows[i];
+                const rowData = {};
+                let hasData = false;
+                
+                for (let j = 0; j < row.cells.length; j++) {
+                    const input = row.cells[j].getElementsByTagName('input')[0];
+                    const value = input.value.trim();
+                    if (value) {
+                        hasData = true;
+                    }
+                    rowData[headers[j]] = value;
+                }
+                
+                if (hasData) {
+                    data.push(rowData);
+                }
+            }
+            
+            return data;
+        }
+
+        function displayResultTable(data, headers) {
+            const table = document.getElementById('resultTable');
+            
+            let html = '<thead><tr>';
+            headers.forEach(h => {
+                html += `<th>${h}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            data.forEach(row => {
+                html += '<tr>';
+                headers.forEach(h => {
+                    html += `<td>${row[h] || ''}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody>';
+            
+            table.innerHTML = html;
+            window.mergedData = data;
+            window.mergedHeaders = headers;
+        }
+
+        function downloadResult() {
+            if (!window.mergedData || !window.mergedHeaders) {
+                alert('No merged data to download');
+                return;
+            }
+
+            const csvContent = [
+                window.mergedHeaders.join(','),
+                ...window.mergedData.map(row => 
+                    window.mergedHeaders.map(h => {
+                        const value = row[h] || '';
+                        return value.includes(',') || value.includes('"') || value.includes('\n') 
+                            ? `"${value.replace(/"/g, '""')}"` 
+                            : value;
+                    }).join(',')
+                )
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'merged_data.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function showStatus(elementId, message, type) {
+            const statusDiv = document.getElementById(elementId);
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+    </script>
+</body>
+</html>
