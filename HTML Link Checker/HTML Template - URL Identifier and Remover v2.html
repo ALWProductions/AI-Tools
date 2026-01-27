@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Link URL Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border: 1px solid #ddd;
+        }
+
+        .header {
+            background: #000;
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: #ccc;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+
+        .input-section, .links-section {
+            padding: 30px;
+        }
+
+        .input-section {
+            border-right: 1px solid #ddd;
+            background: #fafafa;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #000;
+        }
+
+        .upload-zone {
+            border: 2px dashed #ccc;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 15px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .upload-zone:hover {
+            border-color: #666;
+        }
+
+        .upload-zone.dragover {
+            border-color: #000;
+            background: #f5f5f5;
+        }
+
+        .upload-text {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            font-size: 12px;
+            color: #999;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 15px 0;
+            color: #999;
+            font-size: 12px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 350px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            resize: vertical;
+            background: white;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #000;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: 1px solid #000;
+            background: white;
+            color: #000;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #000;
+            color: white;
+        }
+
+        .btn-primary {
+            background: #000;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            background: #333;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #000;
+            border: 1px solid #ccc;
+        }
+
+        .btn-secondary:hover {
+            background: #f5f5f5;
+            color: #000;
+            border-color: #000;
+        }
+
+        .links-list {
+            max-height: 450px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            background: white;
+        }
+
+        .link-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .link-item:hover {
+            background: #fafafa;
+        }
+
+        .link-item:last-child {
+            border-bottom: none;
+        }
+
+        .checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            border: 1px solid #000;
+        }
+
+        .link-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .link-url {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #000;
+            word-break: break-all;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .link-context {
+            font-size: 12px;
+            color: #666;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #fafafa;
+            border: 1px solid #ddd;
+        }
+
+        .stat-item {
+            flex: 1;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #000;
+        }
+
+        .bulk-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .bulk-actions button {
+            flex: 1;
+            padding: 10px;
+            font-size: 13px;
+        }
+
+        .empty-state {
+            padding: 60px 20px;
+            text-align: center;
+            color: #999;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .input-section {
+                border-right: none;
+                border-bottom: 1px solid #ddd;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f5f5f5;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>HTML Link URL Editor</h1>
+            <p>Extract, select, and remove URLs from HTML href attributes</p>
+        </div>
+
+        <div class="main-content">
+            <div class="input-section">
+                <h2 class="section-title">HTML Input</h2>
+                
+                <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-text">Click to upload HTML file</div>
+                    <div class="upload-subtext">or drag and drop file here</div>
+                </div>
+                <input type="file" id="fileInput" accept=".html,.htm" onchange="handleFileUpload(event)">
+                
+                <div class="divider">OR PASTE CODE BELOW</div>
+                
+                <textarea id="htmlInput" placeholder="Paste your HTML code here..."></textarea>
+                <div class="button-group">
+                    <button class="btn-primary" onclick="analyzeHTML()">Extract Links</button>
+                    <button class="btn-secondary" onclick="clearInput()">Clear</button>
+                </div>
+            </div>
+
+            <div class="links-section">
+                <h2 class="section-title">Found Links</h2>
+                
+                <div class="stats" id="stats" style="display: none;">
+                    <div class="stat-item">
+                        <div class="stat-label">Total Links</div>
+                        <div class="stat-value" id="totalLinks">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Selected</div>
+                        <div class="stat-value" id="selectedLinks">0</div>
+                    </div>
+                </div>
+
+                <div class="bulk-actions" id="bulkActions" style="display: none;">
+                    <button class="btn-secondary" onclick="selectAll()">Select All</button>
+                    <button class="btn-secondary" onclick="deselectAll()">Deselect All</button>
+                    <button class="btn-primary" onclick="removeSelected()">Remove Selected URLs</button>
+                </div>
+
+                <div class="links-list" id="linksList">
+                    <div class="empty-state">
+                        <p>No HTML analyzed yet.</p>
+                        <p>Upload a file or paste code and click "Extract Links".</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let originalHTML = '';
+        let links = [];
+        let currentFileName = '';
+
+        // Drag and drop functionality
+        const uploadZone = document.getElementById('uploadZone');
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            if (!file.name.match(/\.(html|htm)$/i)) {
+                alert('Please upload an HTML file (.html or .htm)');
+                return;
+            }
+
+            currentFileName = file.name;
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                document.getElementById('htmlInput').value = e.target.result;
+                uploadZone.querySelector('.upload-text').textContent = `Loaded: ${currentFileName}`;
+            };
+            
+            reader.readAsText(file);
+        }
+
+        function analyzeHTML() {
+            const input = document.getElementById('htmlInput').value;
+            if (!input.trim()) {
+                alert('Please paste some HTML code or upload a file first!');
+                return;
+            }
+
+            originalHTML = input;
+            links = [];
+
+            const hrefRegex = /href\s*=\s*["']([^"']+)["']/gi;
+            let match;
+            let index = 0;
+
+            while ((match = hrefRegex.exec(input)) !== null) {
+                const url = match[1];
+                const fullMatch = match[0];
+                const startPos = match.index;
+                
+                const contextStart = Math.max(0, startPos - 30);
+                const contextEnd = Math.min(input.length, startPos + fullMatch.length + 30);
+                const context = input.substring(contextStart, contextEnd).replace(/\s+/g, ' ');
+
+                links.push({
+                    id: index++,
+                    url: url,
+                    fullMatch: fullMatch,
+                    position: startPos,
+                    context: context,
+                    selected: false
+                });
+            }
+
+            displayLinks();
+            updateStats();
+        }
+
+        function displayLinks() {
+            const listContainer = document.getElementById('linksList');
+            const statsDiv = document.getElementById('stats');
+            const bulkActionsDiv = document.getElementById('bulkActions');
+
+            if (links.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="empty-state">
+                        <p>No links found in the HTML.</p>
+                        <p>Make sure your HTML contains anchor tags with href attributes.</p>
+                    </div>
+                `;
+                statsDiv.style.display = 'none';
+                bulkActionsDiv.style.display = 'none';
+                return;
+            }
+
+            statsDiv.style.display = 'flex';
+            bulkActionsDiv.style.display = 'flex';
+
+            listContainer.innerHTML = links.map(link => `
+                <div class="link-item">
+                    <input type="checkbox" class="checkbox" id="link-${link.id}" 
+                           ${link.selected ? 'checked' : ''} 
+                           onchange="toggleLink(${link.id})">
+                    <div class="link-info">
+                        <div class="link-url">${escapeHtml(link.url)}</div>
+                        <div class="link-context">...${escapeHtml(link.context)}...</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleLink(id) {
+            const link = links.find(l => l.id === id);
+            if (link) {
+                link.selected = !link.selected;
+                updateStats();
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('totalLinks').textContent = links.length;
+            document.getElementById('selectedLinks').textContent = links.filter(l => l.selected).length;
+        }
+
+        function selectAll() {
+            links.forEach(link => link.selected = true);
+            displayLinks();
+            updateStats();
+        }
+
+        function deselectAll() {
+            links.forEach(link => link.selected = false);
+            displayLinks();
+            updateStats();
+        }
+
+        function removeSelected() {
+            const selectedLinks = links.filter(l => l.selected);
+            
+            if (selectedLinks.length === 0) {
+                alert('Please select at least one link to remove!');
+                return;
+            }
+
+            if (!confirm(`Remove ${selectedLinks.length} URL(s) from the HTML?`)) {
+                return;
+            }
+
+            let modifiedHTML = originalHTML;
+            
+            selectedLinks.sort((a, b) => b.position - a.position).forEach(link => {
+                const beforeLink = modifiedHTML.substring(0, link.position);
+                const afterLink = modifiedHTML.substring(link.position + link.fullMatch.length);
+                
+                const quoteChar = link.fullMatch.includes('href="') ? '"' : "'";
+                const replacement = `href=${quoteChar}${quoteChar}`;
+                
+                modifiedHTML = beforeLink + replacement + afterLink;
+            });
+
+            document.getElementById('htmlInput').value = modifiedHTML;
+            
+            alert(`Successfully removed ${selectedLinks.length} URL(s)! The modified HTML is now in the input box. You can copy it or download it.`);
+            
+            links = links.filter(l => !l.selected);
+            displayLinks();
+            updateStats();
+        }
+
+        function clearInput() {
+            if (document.getElementById('htmlInput').value && !confirm('Clear all content?')) {
+                return;
+            }
+            document.getElementById('htmlInput').value = '';
+            document.getElementById('fileInput').value = '';
+            uploadZone.querySelector('.upload-text').textContent = 'Click to upload HTML file';
+            originalHTML = '';
+            links = [];
+            currentFileName = '';
+            displayLinks();
+            updateStats();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

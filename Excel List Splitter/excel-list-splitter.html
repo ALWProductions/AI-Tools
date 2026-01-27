@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel List Splitter Tool</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #d9d9d9;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: #000000;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .tool-card {
+            background: #ffffff;
+            padding: 30px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.5);
+            margin-bottom: 20px;
+        }
+
+        .tool-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #000000;
+            margin-bottom: 20px;
+        }
+
+        .upload-area {
+            border: 2px dashed #ccc;
+            padding: 40px;
+            text-align: center;
+            transition: border-color 0.3s ease;
+            margin-bottom: 20px;
+            background: #f9f9f9;
+        }
+
+        .upload-area.dragover {
+            border-color: #333333;
+            background-color: #f0f0f0;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #000000;
+            color: #ffffff;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .file-input-label:hover {
+            background: #333333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .process-btn {
+            background: #555555;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        .process-btn:hover:not(:disabled) {
+            background: #333333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .process-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .config-section {
+            background: #f8f9fa;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .config-title {
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #000000;
+        }
+
+        .config-item {
+            margin-bottom: 15px;
+        }
+
+        .config-item label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .config-item input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            width: 200px;
+        }
+
+        .progress-container {
+            display: none;
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #333333;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 10px;
+            font-weight: 500;
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .summary-card {
+            background: #f8f9fa;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #333333;
+        }
+
+        .summary-title {
+            font-weight: 600;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            color: #000000;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: #ffffff;
+            border: 1px solid #eee;
+        }
+
+        .stat-number {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: #000000;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #666666;
+            margin-top: 5px;
+        }
+
+        .preview-section {
+            margin-top: 30px;
+        }
+
+        .list-preview {
+            background: #ffffff;
+            border: 1px solid #ddd;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        .list-header {
+            background: #f5f5f5;
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .list-title {
+            font-weight: 600;
+            color: #000000;
+        }
+
+        .list-info {
+            font-size: 0.9em;
+            color: #666666;
+        }
+
+        .list-content {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85em;
+        }
+
+        .preview-table th,
+        .preview-table td {
+            padding: 8px 12px;
+            border: 1px solid #eee;
+            text-align: left;
+        }
+
+        .preview-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .download-section {
+            margin-top: 20px;
+        }
+
+        .download-all-btn {
+            background: #000000;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 600;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .download-all-btn:hover {
+            background: #333333;
+        }
+
+        .individual-downloads {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .download-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        .download-btn {
+            background: #555555;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: 500;
+            width: 100%;
+        }
+
+        .download-btn:hover {
+            background: #333333;
+        }
+
+        .error-message {
+            background: #ffe6e6;
+            color: #cc0000;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #cc0000;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #28a745;
+        }
+
+        .toggle-btn {
+            background: #666666;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+
+        .toggle-btn:hover {
+            background: #888888;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Excel List Splitter Tool</h1>
+            <p>Split large Excel files into smaller chunks under 2KB and 40,000 records</p>
+        </div>
+
+        <div class="tool-card">
+            <div class="tool-title">Configuration</div>
+            <div class="config-section">
+                <div class="config-title">Split Settings</div>
+                <div class="config-item">
+                    <label>Maximum Records per File:</label>
+                    <input type="number" id="maxRecords" value="39000" min="1000" max="39999">
+                </div>
+                <div class="config-item">
+                    <label>Target File Size (KB):</label>
+                    <input type="number" id="maxFileSize" value="1900" min="500" max="1999" step="100">
+                </div>
+                <div class="config-item">
+                    <label style="display: flex; align-items: center;">
+                        <input type="checkbox" id="preserveHeaders" checked style="margin-right: 10px;">
+                        Include headers in each split file
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="tool-card">
+            <div class="tool-title">Upload Excel File</div>
+            
+            <div class="upload-area" id="uploadArea">
+                <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls,.csv">
+                <p>Drop your Excel file here or click to browse</p>
+                <label for="fileInput" class="file-input-label">Choose File</label>
+                <div id="fileName" style="margin-top: 15px; font-weight: 500;"></div>
+            </div>
+
+            <button class="process-btn" id="processBtn" disabled>Process File</button>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">Processing...</div>
+            </div>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <div class="tool-card">
+                <div class="tool-title">Processing Results</div>
+                
+                <div class="summary-card" id="summaryCard">
+                    <div class="summary-title">Summary</div>
+                    <div id="summaryContent"></div>
+                </div>
+
+                <div class="preview-section" id="previewSection">
+                    <div class="summary-title">List Preview <span style="font-size: 0.8em; font-weight: 400; color: #666;">(Click headers to expand/collapse)</span></div>
+                    <div id="listPreviews"></div>
+                </div>
+
+                <div class="download-section">
+                    <button class="download-all-btn" id="downloadAllBtn">Download All Lists as ZIP</button>
+                    <div class="individual-downloads" id="individualDownloads"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let originalData = null;
+        let splitData = null;
+        let headers = null;
+
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const processBtn = document.getElementById('processBtn');
+
+        // File upload handling
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileUpload(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileUpload(e.target.files[0]);
+            }
+        });
+
+        function handleFileUpload(file) {
+            fileName.textContent = `Selected: ${file.name}`;
+            processBtn.disabled = false;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                    
+                    if (jsonData.length > 0) {
+                        headers = jsonData[0];
+                        originalData = jsonData.slice(1); // Remove header row
+                        console.log('File loaded successfully:', originalData.length, 'records');
+                    }
+                } catch (error) {
+                    showError('Error reading file: ' + error.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        processBtn.addEventListener('click', processData);
+
+        function processData() {
+            if (!originalData || !headers) {
+                showError('Please upload a file first');
+                return;
+            }
+
+            showProgress(true);
+            updateProgress(0, 'Starting processing...');
+
+            const maxRecords = parseInt(document.getElementById('maxRecords').value);
+            const maxFileSize = parseInt(document.getElementById('maxFileSize').value) * 1024; // Convert to bytes
+            const preserveHeaders = document.getElementById('preserveHeaders').checked;
+
+            setTimeout(() => {
+                try {
+                    updateProgress(20, 'Analyzing data structure...');
+                    
+                    splitData = [];
+                    let currentChunk = [];
+                    let currentSize = 0;
+                    let chunkIndex = 1;
+                    
+                    // Calculate approximate header size if preserving headers
+                    const headerSize = preserveHeaders ? estimateRowSize(headers) : 0;
+
+                    updateProgress(40, 'Splitting data into chunks...');
+
+                    for (let i = 0; i < originalData.length; i++) {
+                        const row = originalData[i];
+                        const rowSize = estimateRowSize(row);
+                        
+                        // Check if adding this row would exceed limits
+                        const wouldExceedRecords = currentChunk.length >= maxRecords;
+                        const wouldExceedSize = (currentSize + rowSize + headerSize) > maxFileSize;
+                        
+                        if ((wouldExceedRecords || wouldExceedSize) && currentChunk.length > 0) {
+                            // Save current chunk
+                            const chunk = preserveHeaders ? [headers, ...currentChunk] : currentChunk;
+                            splitData.push({
+                                index: chunkIndex++,
+                                data: chunk,
+                                recordCount: currentChunk.length,
+                                estimatedSize: currentSize + headerSize
+                            });
+                            
+                            // Reset for new chunk
+                            currentChunk = [];
+                            currentSize = headerSize;
+                        }
+                        
+                        // Add current row to chunk
+                        currentChunk.push(row);
+                        currentSize += rowSize;
+                        
+                        // Update progress
+                        if (i % 1000 === 0) {
+                            updateProgress(40 + (i / originalData.length) * 40, `Processing row ${i + 1} of ${originalData.length}...`);
+                        }
+                    }
+                    
+                    // Don't forget the last chunk
+                    if (currentChunk.length > 0) {
+                        const chunk = preserveHeaders ? [headers, ...currentChunk] : currentChunk;
+                        splitData.push({
+                            index: chunkIndex,
+                            data: chunk,
+                            recordCount: currentChunk.length,
+                            estimatedSize: currentSize + headerSize
+                        });
+                    }
+
+                    updateProgress(90, 'Generating previews...');
+                    
+                    setTimeout(() => {
+                        updateProgress(100, 'Processing complete!');
+                        showResults();
+                        setTimeout(() => showProgress(false), 500);
+                    }, 200);
+
+                } catch (error) {
+                    showError('Error processing data: ' + error.message);
+                    showProgress(false);
+                }
+            }, 100);
+        }
+
+        function estimateRowSize(row) {
+            // Rough estimate: each cell value as string plus commas and quotes
+            return row.map(cell => String(cell || '').length + 3).reduce((a, b) => a + b, 0) + 2;
+        }
+
+        function showResults() {
+            const resultsSection = document.getElementById('resultsSection');
+            const summaryContent = document.getElementById('summaryContent');
+            const listPreviews = document.getElementById('listPreviews');
+            const individualDownloads = document.getElementById('individualDownloads');
+
+            // Generate summary
+            const totalRecords = originalData.length;
+            const totalChunks = splitData.length;
+            const avgRecordsPerChunk = Math.round(totalRecords / totalChunks);
+            const maxChunkSize = Math.max(...splitData.map(chunk => chunk.estimatedSize));
+
+            summaryContent.innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number">${totalRecords.toLocaleString()}</div>
+                        <div class="stat-label">Total Records</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">${totalChunks}</div>
+                        <div class="stat-label">Split Files</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">${avgRecordsPerChunk.toLocaleString()}</div>
+                        <div class="stat-label">Avg Records/File</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">${Math.round(maxChunkSize/1024)}KB</div>
+                        <div class="stat-label">Largest File Size</div>
+                    </div>
+                </div>
+            `;
+
+            // Generate previews
+            listPreviews.innerHTML = '';
+            individualDownloads.innerHTML = '';
+
+            splitData.forEach((chunk, index) => {
+                // Create preview
+                const previewDiv = document.createElement('div');
+                previewDiv.className = 'list-preview';
+                
+                const headerDiv = document.createElement('div');
+                headerDiv.className = 'list-header';
+                headerDiv.innerHTML = `
+                    <div class="list-title">List ${chunk.index}</div>
+                    <div class="list-info">${chunk.recordCount.toLocaleString()} records • ~${Math.round(chunk.estimatedSize/1024)}KB</div>
+                    <button class="toggle-btn" onclick="togglePreview(${index})">Show</button>
+                `;
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'list-content';
+                contentDiv.style.display = 'none';
+                contentDiv.id = `preview-${index}`;
+                
+                // Generate table preview (first 10 rows)
+                const previewRows = chunk.data.slice(0, Math.min(11, chunk.data.length));
+                let tableHTML = '<table class="preview-table"><thead><tr>';
+                
+                if (previewRows.length > 0) {
+                    previewRows[0].forEach(header => {
+                        tableHTML += `<th>${String(header || '')}</th>`;
+                    });
+                    tableHTML += '</tr></thead><tbody>';
+                    
+                    previewRows.slice(1).forEach(row => {
+                        tableHTML += '<tr>';
+                        row.forEach(cell => {
+                            tableHTML += `<td>${String(cell || '')}</td>`;
+                        });
+                        tableHTML += '</tr>';
+                    });
+                    tableHTML += '</tbody></table>';
+                    
+                    if (chunk.data.length > 11) {
+                        tableHTML += `<p style="text-align: center; margin-top: 10px; color: #666; font-style: italic;">... and ${chunk.data.length - 11} more rows</p>`;
+                    }
+                }
+                
+                contentDiv.innerHTML = tableHTML;
+                
+                previewDiv.appendChild(headerDiv);
+                previewDiv.appendChild(contentDiv);
+                listPreviews.appendChild(previewDiv);
+
+                // Create download button
+                const downloadDiv = document.createElement('div');
+                downloadDiv.className = 'download-item';
+                downloadDiv.innerHTML = `
+                    <div style="margin-bottom: 10px;">
+                        <strong>List ${chunk.index}</strong><br>
+                        <span style="color: #666; font-size: 0.9em;">${chunk.recordCount.toLocaleString()} records</span>
+                    </div>
+                    <button class="download-btn" onclick="downloadSingle(${index})">Download Excel</button>
+                `;
+                individualDownloads.appendChild(downloadDiv);
+            });
+
+            resultsSection.style.display = 'block';
+        }
+
+        function togglePreview(index) {
+            const contentDiv = document.getElementById(`preview-${index}`);
+            const button = contentDiv.previousElementSibling.querySelector('.toggle-btn');
+            
+            if (contentDiv.style.display === 'none') {
+                contentDiv.style.display = 'block';
+                button.textContent = 'Hide';
+            } else {
+                contentDiv.style.display = 'none';
+                button.textContent = 'Show';
+            }
+        }
+
+        function downloadSingle(index) {
+            const chunk = splitData[index];
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(chunk.data);
+            XLSX.utils.book_append_sheet(wb, ws, `List_${chunk.index}`);
+            XLSX.writeFile(wb, `List_${chunk.index}.xlsx`);
+        }
+
+        function downloadAll() {
+            // Note: Creating a ZIP file requires additional libraries
+            // For now, we'll download each file individually
+            splitData.forEach((chunk, index) => {
+                setTimeout(() => downloadSingle(index), index * 500);
+            });
+        }
+
+        document.getElementById('downloadAllBtn').addEventListener('click', downloadAll);
+
+        function showProgress(show) {
+            const progressContainer = document.getElementById('progressContainer');
+            progressContainer.style.display = show ? 'block' : 'none';
+        }
+
+        function updateProgress(percent, text) {
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            progressFill.style.width = percent + '%';
+            progressText.textContent = text;
+        }
+
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = message;
+            
+            const existingErrors = document.querySelectorAll('.error-message');
+            existingErrors.forEach(error => error.remove());
+            
+            const uploadArea = document.getElementById('uploadArea');
+            uploadArea.parentNode.insertBefore(errorDiv, uploadArea.nextSibling);
+            
+            setTimeout(() => errorDiv.remove(), 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success-message';
+            successDiv.textContent = message;
+            
+            const container = document.querySelector('.container');
+            container.insertBefore(successDiv, container.firstChild);
+            
+            setTimeout(() => successDiv.remove(), 5000);
+        }
+    </script>
+</body>
+</html>
