@@ -1,0 +1,830 @@
+%PDF-1.3
+%ºß¬à
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 4 0 R
+>>
+endobj
+4 0 obj
+<<
+/Length 3061
+>>
+stream
+0.5670000000000001 w
+0 G
+BT
+/F2 18 Tf
+20.6999999999999993 TL
+0 g
+42.5196850393700814 799.3703149606299121 Td
+(CSV/Excel VLOOKUP Append Tool) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+42.5196850393700814 782.3624409448818824 Td
+(Complete User Guide) Tj
+ET
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0 g
+42.5196850393700814 748.346692913385823 Td
+(What This Tool Does) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+42.5196850393700814 731.3388188976377933 Td
+(This tool performs a VLOOKUP-style merge between two files. It takes a MAIN FILE containing your primary) Tj
+T* (dataset \(with potentially hundreds of records\) and an APPEND FILE with additional fields to add. The tool matches) Tj
+T* (records based on a common identifier called "siteacronym" and appends new columns to all matching rows.) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0 g
+42.5196850393700814 663.3073228346456744 Td
+(Real-World Example) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+42.5196850393700814 646.2994488188976447 Td
+(Imagine you have a file with 500 invoice records across 14 different client sites. You want to add 5 new data fields) Tj
+T* (\(like contact info, billing codes, etc.\) to each record based on which site it belongs to. Instead of manually entering) Tj
+T* (this information 500 times, you create a simple file with 14 rows \(one per site\) containing the 5 fields. This tool) Tj
+T* (automatically adds those fields to all 500 records based on matching site identifiers.) Tj
+ET
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0 g
+42.5196850393700814 561.2600787401574962 Td
+(How It Works \(Technical Overview\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 544.2522047244094665 Td
+(1. Tool reads main file and identifies unique siteacronym values) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 527.2443307086614368 Td
+(2. Reads append file \(one row per siteacronym with new fields\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 510.2364566929133503 Td
+(3. For each row in main file, looks up matching siteacronym) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 493.2285826771653205 Td
+(4. Copies append field values to the main file row) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 476.2207086614172908 Td
+(5. All rows with same siteacronym get same appended data) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0 g
+42.5196850393700814 442.2049606299212314 Td
+(Key Features) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 425.1970866141731449 Td
+(- Supports CSV and Excel files \(.csv, .xlsx, .xls\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 408.1892125984251152 Td
+(- Handles multiple records per siteacronym) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 391.1813385826770855 Td
+(- Automatically trims whitespace from all values) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 374.1734645669290558 Td
+(- Runs entirely in browser \(no server uploads\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 357.1655905511810261 Td
+(- Privacy-compliant and secure) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 340.1577165354329964 Td
+(- Preview data before merging) Tj
+ET
+endstream
+endobj
+5 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 6 0 R
+>>
+endobj
+6 0 obj
+<<
+/Length 3829
+>>
+stream
+0.5670000000000001 w
+0 G
+BT
+/F2 16 Tf
+18.3999999999999986 TL
+0 g
+42.5196850393700814 799.3703149606299121 Td
+(Step-by-Step Instructions) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0 g
+42.5196850393700814 765.3545669291338527 Td
+(Step 1: Upload Main File) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 748.346692913385823 Td
+(1. Click "Select your main CSV or Excel file") Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 731.3388188976377933 Td
+(2. Choose your file containing the primary dataset) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 714.3309448818897636 Td
+(3. File must have column headers in the first row) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 697.3230708661417339 Td
+(4. Preview of first 100 rows displays below) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 680.3151968503937042 Td
+(5. Success message shows row and column count) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0 g
+42.5196850393700814 654.8033858267716596 Td
+(Step 2: Select Lookup Column) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 637.7955118110235162 Td
+(1. Dropdown menu shows all column names) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 620.7876377952754865 Td
+(2. Select which column contains siteacronym values) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 603.7797637795274568 Td
+(3. Tool auto-selects "siteacronym" or "acronym" if found) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 586.7718897637794271 Td
+(4. Displays count of unique siteacronym values) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 569.7640157480313974 Td
+(5. This column is the matching key for the merge) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0 g
+42.5196850393700814 544.2522047244094665 Td
+(Step 3: Upload Append Data File) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 527.2443307086614368 Td
+(1. Click "Select append data CSV or Excel file") Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 510.2364566929133503 Td
+(2. Choose file with additional fields to append) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 493.2285826771653205 Td
+(3. File MUST have "siteacronym" or "acronym" column) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 476.2207086614172908 Td
+(4. Typically one row per unique siteacronym) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 459.2128346456692611 Td
+(5. Preview shows the append data structure) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 442.2049606299212314 Td
+(6. Siteacronym column highlighted in gray) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0 g
+42.5196850393700814 416.69314960629913 Td
+(Step 4: Execute VLOOKUP & Merge) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 399.6852755905511003 Td
+(1. Click "Execute VLOOKUP & Merge" button) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 382.6774015748030706 Td
+(2. Tool matches rows based on siteacronym) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 365.6695275590550409 Td
+(3. Appends new fields to all matching rows) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 348.6616535433070112 Td
+(4. Success message shows match statistics) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 331.6537795275589815 Td
+(5. Preview of merged data displays below) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0 g
+42.5196850393700814 306.1419685039369369 Td
+(Step 5: Download Merged Result) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 289.1340944881889072 Td
+(1. Click "Download Merged CSV" button) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 272.1262204724408775 Td
+(2. File automatically downloads as "merged_data.csv") Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 255.1183464566928478 Td
+(3. Contains all original columns plus new fields) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 238.1104724409448181 Td
+(4. Ready to open in Excel or other applications) Tj
+ET
+endstream
+endobj
+7 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 8 0 R
+>>
+endobj
+8 0 obj
+<<
+/Length 4386
+>>
+stream
+0.5670000000000001 w
+0 G
+BT
+/F2 16 Tf
+18.3999999999999986 TL
+0 g
+42.5196850393700814 799.3703149606299121 Td
+(File Requirements & Format) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0 g
+42.5196850393700814 765.3545669291338527 Td
+(Main File Requirements:) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 748.346692913385823 Td
+(- Format: CSV \(.csv\), Excel \(.xlsx or .xls\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 731.3388188976377933 Td
+(- Must have header row with column names) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 714.3309448818897636 Td
+(- Must have at least one data row) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 697.3230708661417339 Td
+(- Must contain a column with siteacronym values) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 680.3151968503937042 Td
+(- Can have duplicate siteacronym values \(multiple rows\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 663.3073228346456744 Td
+(- Example: 500 rows with 14 different siteacronyms) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0 g
+42.5196850393700814 637.7955118110235162 Td
+(Append File Requirements:) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 620.7876377952754865 Td
+(- Format: CSV \(.csv\), Excel \(.xlsx or .xls\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 603.7797637795274568 Td
+(- Must have header row with column names) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 586.7718897637794271 Td
+(- MUST have column named "siteacronym" or "acronym") Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 569.7640157480313974 Td
+(- Typically one row per unique siteacronym) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 552.7561417322833677 Td
+(- Contains the new fields to append) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+51.0236220472441033 535.748267716535338 Td
+(- Example: 14 rows with 5 additional fields each) Tj
+ET
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0 g
+42.5196850393700814 501.7325196850393354 Td
+(Complete Example Scenario) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+42.5196850393700814 484.7246456692913057 Td
+(Main File: Contains 500 invoice records with columns: Invoice_ID, Date, Amount, Client_Site. The Client_Site) Tj
+T* (column has 14 different values \(ABC, XYZ, etc.\) repeated throughout the 500 rows.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+42.5196850393700814 433.7010236220471597 Td
+(Append File: Contains 14 rows \(one per site\) with columns: siteacronym, Contact_Name, Contact_Email,) Tj
+T* (Billing_Code, Region, Tax_Rate.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+42.5196850393700814 382.6774015748030706 Td
+(Result: 500 rows with all original columns PLUS the 5 new fields. Each invoice automatically receives the correct) Tj
+T* (contact info and billing details based on its Client_Site value.) Tj
+ET
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0 g
+42.5196850393700814 314.6459055118109518 Td
+(Troubleshooting Common Issues) Tj
+ET
+BT
+/F2 10 Tf
+11.5 TL
+0 g
+42.5196850393700814 297.6380314960629221 Td
+(Issue: "File must have siteacronym column") Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+42.5196850393700814 280.6301574803148924 Td
+(Solution: Your append file needs a column named exactly "siteacronym" or "acronym". Check spelling and) Tj
+T* (capitalization.) Tj
+ET
+BT
+/F2 10 Tf
+11.5 TL
+0 g
+42.5196850393700814 229.6065354330708033 Td
+(Issue: "No rows matched") Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+42.5196850393700814 212.5986614173227736 Td
+(Solution: The siteacronym values in your two files don't match. Check for typos, extra spaces, or different) Tj
+T* (capitalization. The tool automatically trims spaces but values must match exactly otherwise.) Tj
+ET
+BT
+/F2 10 Tf
+11.5 TL
+0 g
+42.5196850393700814 161.5750393700786844 Td
+(Issue: "Invalid file format") Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+42.5196850393700814 144.5671653543306547 Td
+(Solution: Only CSV and Excel formats are supported. Save your file as .csv, .xlsx, or .xls. Ensure the file has) Tj
+T* (headers in the first row.) Tj
+ET
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0 g
+42.5196850393700814 76.5356692913385359 Td
+(Privacy & Security Information) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+42.5196850393700814 59.5277952755905062 Td
+(This tool processes all data entirely within your web browser. No files are uploaded to external servers or cloud) Tj
+T* (services. All processing happens locally on your device. Your data remains completely private and secure. When) Tj
+T* (you close the browser, all data is cleared from memory.) Tj
+ET
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R 5 0 R 7 0 R ]
+/Count 3
+>>
+endobj
+9 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+10 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+11 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+12 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+13 0 obj
+<<
+/Type /Font
+/BaseFont /Courier
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+14 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+15 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+16 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+17 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Roman
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+18 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+19 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Italic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+20 0 obj
+<<
+/Type /Font
+/BaseFont /Times-BoldItalic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+21 0 obj
+<<
+/Type /Font
+/BaseFont /ZapfDingbats
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+22 0 obj
+<<
+/Type /Font
+/BaseFont /Symbol
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 9 0 R
+/F2 10 0 R
+/F3 11 0 R
+/F4 12 0 R
+/F5 13 0 R
+/F6 14 0 R
+/F7 15 0 R
+/F8 16 0 R
+/F9 17 0 R
+/F10 18 0 R
+/F11 19 0 R
+/F12 20 0 R
+/F13 21 0 R
+/F14 22 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+23 0 obj
+<<
+/Producer (jsPDF 2.5.1)
+/CreationDate (D:20251219112528-05'00')
+>>
+endobj
+24 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/OpenAction [3 0 R /FitH null]
+/PageLayout /OneColumn
+>>
+endobj
+xref
+0 25
+0000000000 65535 f 
+0000011858 00000 n 
+0000013691 00000 n 
+0000000015 00000 n 
+0000000152 00000 n 
+0000003265 00000 n 
+0000003402 00000 n 
+0000007283 00000 n 
+0000007420 00000 n 
+0000011927 00000 n 
+0000012052 00000 n 
+0000012183 00000 n 
+0000012317 00000 n 
+0000012455 00000 n 
+0000012579 00000 n 
+0000012708 00000 n 
+0000012840 00000 n 
+0000012976 00000 n 
+0000013104 00000 n 
+0000013231 00000 n 
+0000013360 00000 n 
+0000013493 00000 n 
+0000013595 00000 n 
+0000013943 00000 n 
+0000014029 00000 n 
+trailer
+<<
+/Size 25
+/Root 24 0 R
+/Info 23 0 R
+/ID [ <EE6DF871937DD73D2E6267F5B142360A> <EE6DF871937DD73D2E6267F5B142360A> ]
+>>
+startxref
+14133
+%%EOF

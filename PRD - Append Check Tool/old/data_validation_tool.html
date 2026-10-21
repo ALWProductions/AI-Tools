@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Validation Tool - Emma Coding Sheet Checker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border: 1px solid #ddd;
+            padding: 30px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .privacy-notice {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 12px;
+            margin: 20px 0;
+            font-size: 13px;
+            color: #555;
+        }
+        .section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #fafafa;
+            border: 1px solid #ddd;
+        }
+        .section h2 {
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 16px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 6px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        input[type="file"], select {
+            width: 100%;
+            max-width: 500px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            background: white;
+            font-size: 14px;
+        }
+        .table-container {
+            overflow: auto;
+            margin-top: 12px;
+            max-height: 300px;
+            border: 1px solid #ddd;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+            min-width: 100px;
+        }
+        th {
+            background: #f0f0f0;
+            color: #333;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        th.highlight { background: #e0e0e0; }
+        td.highlight { background: #f5f5f5; }
+        td.mismatch { background: #ffe0e0; color: #d00; font-weight: 600; }
+        .btn {
+            padding: 10px 20px;
+            border: 1px solid #333;
+            background: white;
+            color: #333;
+            font-weight: 600;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background: #333;
+            color: white;
+        }
+        .btn:disabled {
+            background: #ccc;
+            border-color: #999;
+            color: #666;
+            cursor: not-allowed;
+        }
+        .btn:disabled:hover {
+            background: #ccc;
+            color: #666;
+        }
+        .btn-primary {
+            background: #333;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #555;
+        }
+        .btn-success {
+            background: #28a745;
+            border-color: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+            border-color: #1e7e34;
+        }
+        .btn-error {
+            background: #dc3545;
+            border-color: #dc3545;
+            color: white;
+        }
+        .btn-error:hover {
+            background: #c82333;
+            border-color: #bd2130;
+        }
+        .status {
+            margin-top: 12px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            font-size: 13px;
+        }
+        .status.success {
+            background: #f0f0f0;
+            border: 2px solid #333;
+        }
+        .status.error {
+            background: #fff;
+            border: 2px solid #333;
+            color: #d00;
+        }
+        .info {
+            display: inline-block;
+            margin-left: 12px;
+            padding: 4px 8px;
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            font-size: 12px;
+            color: #555;
+        }
+        .ignored-fields {
+            margin-top: 10px;
+            padding: 10px;
+            background: #fff;
+            border: 1px solid #ddd;
+            font-size: 12px;
+        }
+        .ignored-fields label {
+            display: inline;
+            font-weight: normal;
+            margin-left: 5px;
+        }
+        .ignored-fields input[type="checkbox"] {
+            width: auto;
+        }
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 8px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+        }
+        .summary-box {
+            background: #fff;
+            border: 2px solid #333;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .summary-box h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .stat-item {
+            padding: 10px;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+        }
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+        .stat-value.success {
+            color: #28a745;
+        }
+        .stat-value.error {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Data Validation Tool - Emma Coding Sheet Checker</h1>
+        
+        <div class="privacy-notice">
+            <strong>Privacy Notice:</strong> This tool runs entirely in your browser. No data is uploaded to any server. All processing happens locally on your device.
+        </div>
+        
+        <div class="section">
+            <h2>1. Upload Appended Data File</h2>
+            <label for="appendedFile">Select your appended data CSV or Excel file:</label>
+            <input type="file" id="appendedFile" accept=".csv,.xlsx,.xls">
+            <div id="appendedStatus"></div>
+            <div id="appendedTableContainer" class="table-container" style="display:none;">
+                <table id="appendedTable"></table>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>2. Upload Emma Coding Sheet Reference File</h2>
+            <label for="referenceFile">Select Emma Coding Sheet reference CSV or Excel file:</label>
+            <input type="file" id="referenceFile" accept=".csv,.xlsx,.xls">
+            <div id="referenceStatus"></div>
+            <div id="referenceTableContainer" class="table-container" style="display:none;">
+                <table id="referenceTable"></table>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>3. Configure Validation Settings</h2>
+            <div class="ignored-fields">
+                <strong>Fields to Ignore During Validation:</strong>
+                <div class="checkbox-group" id="ignoredFieldsContainer">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="ignore_conid" value="con-id" checked>
+                        <label for="ignore_conid">con-id</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="ignore_hycid" value="hyc id" checked>
+                        <label for="ignore_hycid">hyc id</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="ignore_firstname" value="first_name" checked>
+                        <label for="ignore_firstname">first_name</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="ignore_lastname" value="last_name" checked>
+                        <label for="ignore_lastname">last_name</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="ignore_email" value="email address" checked>
+                        <label for="ignore_email">email address</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>4. Run Validation Check</h2>
+            <button class="btn btn-primary" id="validateBtn" onclick="runValidation()" disabled>Run Validation Check</button>
+            <div id="validationStatus"></div>
+        </div>
+
+        <div class="section" id="resultSection" style="display:none;">
+            <h2>5. Validation Results</h2>
+            <div id="summaryBox" class="summary-box"></div>
+            
+            <div style="margin-top: 20px;">
+                <button class="btn btn-success" onclick="downloadCorrectRecords()">
+                    Download Correct Records (CSV)
+                </button>
+                <button class="btn btn-error" onclick="downloadIncorrectRecords()">
+                    Download Incorrect Records (CSV)
+                </button>
+                <button class="btn" onclick="downloadBothExcel()">
+                    Download Both Sheets (Excel)
+                </button>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <h3>Correct Records Preview:</h3>
+                <div class="table-container">
+                    <table id="correctTable"></table>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <h3>Incorrect Records Preview (with mismatches highlighted):</h3>
+                <div class="table-container">
+                    <table id="incorrectTable"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let appendedData = [], appendedHeaders = [];
+        let referenceData = [], referenceHeaders = [];
+        let correctRecords = [], incorrectRecords = [];
+        let mismatchDetails = {};
+
+        function parseFile(file, callback) {
+            const fileName = file.name.toLowerCase();
+            if (fileName.endsWith('.csv')) {
+                Papa.parse(file, { complete: results => callback(results.data), skipEmptyLines: true });
+            } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+                    callback(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header: 1}));
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        function processData(data) {
+            if (data.length < 2) return null;
+            const headers = data[0].map(h => String(h).trim());
+            const rows = data.slice(1).map(row => {
+                const obj = {};
+                headers.forEach((h, i) => obj[h] = row[i] !== undefined ? String(row[i]).trim() : '');
+                return obj;
+            });
+            return { headers, rows };
+        }
+
+        function normalizeFieldName(field) {
+            return field.toLowerCase().replace(/[_\s-]/g, '');
+        }
+
+        function displayTable(tableId, headers, rows, highlightCol = null, mismatchInfo = null) {
+            const table = document.getElementById(tableId);
+            let html = '<thead><tr>';
+            headers.forEach(h => {
+                const cls = (highlightCol && h.toLowerCase() === highlightCol.toLowerCase()) ? 'highlight' : '';
+                html += `<th class="${cls}">${h}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            const displayRows = rows.slice(0, 100);
+            displayRows.forEach((row, idx) => {
+                html += '<tr>';
+                headers.forEach(h => {
+                    let cls = (highlightCol && h.toLowerCase() === highlightCol.toLowerCase()) ? 'highlight' : '';
+                    
+                    // Check if this cell has a mismatch
+                    if (mismatchInfo && row._siteacronym) {
+                        const mismatches = mismatchInfo[row._siteacronym];
+                        if (mismatches && mismatches.includes(h)) {
+                            cls += ' mismatch';
+                        }
+                    }
+                    
+                    html += `<td class="${cls}">${row[h] || ''}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody>';
+            table.innerHTML = html;
+        }
+
+        function showStatus(id, msg, type) {
+            document.getElementById(id).innerHTML = `<div class="status ${type}">${msg}</div>`;
+        }
+
+        function checkValidationReady() {
+            const ready = appendedData.length > 0 && referenceData.length > 0;
+            document.getElementById('validateBtn').disabled = !ready;
+        }
+
+        document.getElementById('appendedFile').addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            parseFile(file, data => {
+                const result = processData(data);
+                if (!result) return showStatus('appendedStatus', 'Invalid file format', 'error');
+                
+                appendedHeaders = result.headers;
+                appendedData = result.rows;
+                
+                const siteacronymCol = appendedHeaders.find(h => 
+                    normalizeFieldName(h) === 'siteacronym' || normalizeFieldName(h) === 'acronym'
+                );
+                
+                if (!siteacronymCol) {
+                    appendedData = [];
+                    appendedHeaders = [];
+                    return showStatus('appendedStatus', 'File must have "siteacronym" or "acronym" column', 'error');
+                }
+                
+                showStatus('appendedStatus', `Loaded ${appendedData.length} rows, ${appendedHeaders.length} columns`, 'success');
+                displayTable('appendedTable', appendedHeaders, appendedData, siteacronymCol);
+                document.getElementById('appendedTableContainer').style.display = 'block';
+                checkValidationReady();
+            });
+        });
+
+        document.getElementById('referenceFile').addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            parseFile(file, data => {
+                const result = processData(data);
+                if (!result) return showStatus('referenceStatus', 'Invalid file format', 'error');
+                
+                referenceHeaders = result.headers;
+                referenceData = result.rows;
+                
+                const siteacronymCol = referenceHeaders.find(h => 
+                    normalizeFieldName(h) === 'siteacronym' || normalizeFieldName(h) === 'acronym'
+                );
+                
+                if (!siteacronymCol) {
+                    referenceData = [];
+                    referenceHeaders = [];
+                    return showStatus('referenceStatus', 'File must have "siteacronym" or "acronym" column', 'error');
+                }
+                
+                showStatus('referenceStatus', `Loaded ${referenceData.length} rows, ${referenceHeaders.length} columns`, 'success');
+                displayTable('referenceTable', referenceHeaders, referenceData, siteacronymCol);
+                document.getElementById('referenceTableContainer').style.display = 'block';
+                checkValidationReady();
+            });
+        });
+
+        function getIgnoredFields() {
+            const ignored = [];
+            document.querySelectorAll('#ignoredFieldsContainer input[type="checkbox"]:checked').forEach(cb => {
+                ignored.push(normalizeFieldName(cb.value));
+            });
+            return ignored;
+        }
+
+        function runValidation() {
+            if (!appendedData.length || !referenceData.length) {
+                return showStatus('validationStatus', 'Please upload both files first', 'error');
+            }
+
+            // Find siteacronym columns
+            const appendedSiteCol = appendedHeaders.find(h => 
+                normalizeFieldName(h) === 'siteacronym' || normalizeFieldName(h) === 'acronym'
+            );
+            const referenceSiteCol = referenceHeaders.find(h => 
+                normalizeFieldName(h) === 'siteacronym' || normalizeFieldName(h) === 'acronym'
+            );
+
+            if (!appendedSiteCol || !referenceSiteCol) {
+                return showStatus('validationStatus', 'Could not find siteacronym column in one or both files', 'error');
+            }
+
+            // Build reference lookup map
+            const referenceMap = {};
+            referenceData.forEach(row => {
+                const key = row[referenceSiteCol];
+                if (key) referenceMap[key] = row;
+            });
+
+            // Get ignored fields
+            const ignoredFields = getIgnoredFields();
+
+            // Find common fields to compare (excluding ignored and siteacronym)
+            const compareFields = [];
+            appendedHeaders.forEach(appHeader => {
+                const normalizedApp = normalizeFieldName(appHeader);
+                
+                // Skip if ignored or if it's the siteacronym field
+                if (ignoredFields.includes(normalizedApp) || normalizedApp === normalizeFieldName(appendedSiteCol)) {
+                    return;
+                }
+
+                // Find matching field in reference
+                const matchingRefHeader = referenceHeaders.find(refHeader => 
+                    normalizeFieldName(refHeader) === normalizedApp
+                );
+
+                if (matchingRefHeader) {
+                    compareFields.push({ appended: appHeader, reference: matchingRefHeader });
+                }
+            });
+
+            // Validate each record
+            correctRecords = [];
+            incorrectRecords = [];
+            mismatchDetails = {};
+
+            appendedData.forEach(appRow => {
+                const siteacronym = appRow[appendedSiteCol];
+                if (!siteacronym) {
+                    // No siteacronym, mark as incorrect
+                    incorrectRecords.push({...appRow, _siteacronym: 'MISSING'});
+                    return;
+                }
+
+                const refRow = referenceMap[siteacronym];
+                if (!refRow) {
+                    // Siteacronym not found in reference
+                    incorrectRecords.push({...appRow, _siteacronym: siteacronym});
+                    mismatchDetails[siteacronym] = ['NOT_FOUND_IN_REFERENCE'];
+                    return;
+                }
+
+                // Compare fields
+                const mismatches = [];
+                compareFields.forEach(field => {
+                    const appVal = (appRow[field.appended] || '').trim();
+                    const refVal = (refRow[field.reference] || '').trim();
+                    
+                    if (appVal !== refVal) {
+                        mismatches.push(field.appended);
+                    }
+                });
+
+                if (mismatches.length > 0) {
+                    incorrectRecords.push({...appRow, _siteacronym: siteacronym});
+                    mismatchDetails[siteacronym] = mismatches;
+                } else {
+                    correctRecords.push(appRow);
+                }
+            });
+
+            // Display results
+            displaySummary(compareFields.length, ignoredFields.length);
+            displayTable('correctTable', appendedHeaders, correctRecords, appendedSiteCol);
+            displayTable('incorrectTable', appendedHeaders, incorrectRecords, appendedSiteCol, mismatchDetails);
+
+            document.getElementById('resultSection').style.display = 'block';
+            showStatus('validationStatus', 'Validation complete!', 'success');
+        }
+
+        function displaySummary(fieldsCompared, fieldsIgnored) {
+            const total = appendedData.length;
+            const correct = correctRecords.length;
+            const incorrect = incorrectRecords.length;
+            const correctPct = total > 0 ? ((correct / total) * 100).toFixed(1) : 0;
+            const incorrectPct = total > 0 ? ((incorrect / total) * 100).toFixed(1) : 0;
+
+            const html = `
+                <h3>Validation Summary</h3>
+                <div class="summary-stats">
+                    <div class="stat-item">
+                        <div class="stat-label">Total Records</div>
+                        <div class="stat-value">${total}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Correct Records</div>
+                        <div class="stat-value success">${correct} (${correctPct}%)</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Incorrect Records</div>
+                        <div class="stat-value error">${incorrect} (${incorrectPct}%)</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Fields Compared</div>
+                        <div class="stat-value">${fieldsCompared}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Fields Ignored</div>
+                        <div class="stat-value">${fieldsIgnored}</div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('summaryBox').innerHTML = html;
+        }
+
+        function dataToCSV(headers, data) {
+            const csv = [
+                headers.join(','),
+                ...data.map(row => 
+                    headers.map(h => {
+                        const val = row[h] || '';
+                        return /[,"\n]/.test(val) ? `"${val.replace(/"/g, '""')}"` : val;
+                    }).join(',')
+                )
+            ].join('\n');
+            return csv;
+        }
+
+        function downloadCorrectRecords() {
+            if (!correctRecords.length) return alert('No correct records to download');
+            
+            const csv = dataToCSV(appendedHeaders, correctRecords);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'correct_records.csv';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadIncorrectRecords() {
+            if (!incorrectRecords.length) return alert('No incorrect records to download');
+            
+            // Add mismatch info column
+            const extendedHeaders = [...appendedHeaders, 'MISMATCHED_FIELDS'];
+            const extendedData = incorrectRecords.map(row => {
+                const siteacronym = row._siteacronym || row[appendedHeaders.find(h => 
+                    normalizeFieldName(h) === 'siteacronym' || normalizeFieldName(h) === 'acronym'
+                )];
+                const mismatches = mismatchDetails[siteacronym] || [];
+                return {
+                    ...row,
+                    'MISMATCHED_FIELDS': mismatches.join('; ')
+                };
+            });
+
+            const csv = dataToCSV(extendedHeaders, extendedData);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'incorrect_records.csv';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadBothExcel() {
+            if (!correctRecords.length && !incorrectRecords.length) {
+                return alert('No records to download');
+            }
+
+            const wb = XLSX.utils.book_new();
+
+            // Correct records sheet
+            if (correctRecords.length > 0) {
+                const correctWS = XLSX.utils.json_to_sheet(correctRecords, { header: appendedHeaders });
+                XLSX.utils.book_append_sheet(wb, correctWS, 'Correct Records');
+            }
+
+            // Incorrect records sheet with mismatch info
+            if (incorrectRecords.length > 0) {
+                const extendedHeaders = [...appendedHeaders, 'MISMATCHED_FIELDS'];
+                const extendedData = incorrectRecords.map(row => {
+                    const siteacronym = row._siteacronym || row[appendedHeaders.find(h => 
+                        normalizeFieldName(h) === 'siteacronym' || normalizeFieldName(h) === 'acronym'
+                    )];
+                    const mismatches = mismatchDetails[siteacronym] || [];
+                    return {
+                        ...row,
+                        'MISMATCHED_FIELDS': mismatches.join('; ')
+                    };
+                });
+                const incorrectWS = XLSX.utils.json_to_sheet(extendedData, { header: extendedHeaders });
+                XLSX.utils.book_append_sheet(wb, incorrectWS, 'Incorrect Records');
+            }
+
+            XLSX.writeFile(wb, 'validation_results.xlsx');
+        }
+    </script>
+</body>
+</html>

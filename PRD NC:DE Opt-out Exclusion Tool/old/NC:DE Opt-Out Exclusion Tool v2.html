@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NC/DE Opt-out Exclusion Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; background-color: #f1f5f9; line-height: 1.6; color: #334155; }
+        .container { max-width: 1100px; margin: 40px auto; padding: 32px; background-color: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
+        .title { font-size: 1.875rem; font-weight: 700; color: #1e293b; }
+        .subtitle { color: #64748b; margin-top: 4px; }
+        .section { margin-bottom: 32px; padding: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
+        .section-title { font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; color: #334155; }
+        .upload-area { border: 2px dashed #cbd5e0; border-radius: 8px; padding: 40px; text-align: center; cursor: pointer; background: white; transition: all 0.2s; }
+        .upload-area:hover { border-color: #3b82f6; background-color: #eff6ff; }
+        .textarea { width: 100%; min-height: 180px; padding: 12px; border: 1px solid #cbd5e0; border-radius: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.875rem; resize: vertical; }
+        .select { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; margin-bottom: 12px; background: white; }
+        .button { padding: 12px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        .button-primary { background-color: #2563eb; color: white; width: 100%; }
+        .button-primary:hover { background-color: #1d4ed8; }
+        .button-success { background-color: #16a34a; color: white; }
+        .button-success:hover { background-color: #15803d; }
+        .stats { display: flex; gap: 24px; margin-top: 20px; margin-bottom: 24px;}
+        .stat-card { flex: 1; padding: 16px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; text-align: center; }
+        .stat-value { font-size: 1.5rem; font-weight: 700; color: #1e293b; }
+        .stat-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
+        .table-container { margin-top: 12px; overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; max-height: 400px; }
+        .table { width: 100%; border-collapse: collapse; font-size: 0.825rem; }
+        .table th { background: #f1f5f9; padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; }
+        .table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; }
+        .match-tag { padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
+        .tag-email { background: #fee2e2; color: #991b1b; }
+        .tag-domain { background: #fef3c7; color: #92400e; }
+        .hidden { display: none; }
+        .review-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; background: #e2e8f0; margin-left: 8px;}
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState } = React;
+
+        const INITIAL_REMOVAL_LIST = `bill@wesjr.org
+schultzka8@hotmail.com
+snesbitt1@aol.com
+ciaomerle@mullinenterprises.com
+bopbopklein@yahoo.com
+mkanoff@peninsulapacific.com
+jhuarte@gmail.com
+gorlitsky@aol.com
+m@milesfisher.com
+rmfinwa@aol.com
+rcrowell@vancestreetcapital.com
+panish@psblaw.com
+@digitalhealthstrategies.com`;
+
+        const App = () => {
+            const [masterData, setMasterData] = useState(null);
+            const [fileName, setFileName] = useState("");
+            const [emailColumn, setEmailColumn] = useState("");
+            const [removalText, setRemovalText] = useState(INITIAL_REMOVAL_LIST);
+            const [processedData, setProcessedData] = useState(null);
+            const [removedMatches, setRemovedMatches] = useState([]);
+            const [stats, setStats] = useState({ total: 0, removed: 0, remaining: 0 });
+
+            const handleFileUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                setFileName(file.name);
+                
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const bstr = evt.target.result;
+                    const wb = XLSX.read(bstr, { type: 'binary' });
+                    const wsname = wb.SheetNames[0];
+                    const ws = wb.Sheets[wsname];
+                    const data = XLSX.utils.sheet_to_json(ws);
+                    
+                    if (data.length > 0) {
+                        setMasterData(data);
+                        const cols = Object.keys(data[0]);
+                        const likely = cols.find(c => c.toLowerCase().includes('email'));
+                        setEmailColumn(likely || cols[0]);
+                    }
+                };
+                reader.readAsBinaryString(file);
+            };
+
+            const processList = () => {
+                if (!masterData || !emailColumn) return;
+
+                const itemsToRemove = removalText.split('\n')
+                    .map(item => item.trim().toLowerCase())
+                    .filter(item => item !== "");
+
+                const matches = [];
+                const remainingRows = masterData.filter(row => {
+                    const email = String(row[emailColumn] || "").toLowerCase().trim();
+                    let matchReason = null;
+                    let matchValue = null;
+
+                    for (const item of itemsToRemove) {
+                        if (item.startsWith('@') && email.endsWith(item)) {
+                            matchReason = 'Domain';
+                            matchValue = item;
+                            break;
+                        } else if (email === item) {
+                            matchReason = 'Exact Email';
+                            matchValue = item;
+                            break;
+                        }
+                    }
+                    
+                    if (matchReason) {
+                        matches.push({ ...row, _matchReason: matchReason, _matchValue: matchValue });
+                        return false;
+                    }
+                    return true;
+                });
+
+                setProcessedData(remainingRows);
+                setRemovedMatches(matches);
+                setStats({
+                    total: masterData.length,
+                    removed: matches.length,
+                    remaining: remainingRows.length
+                });
+            };
+
+            const downloadFile = () => {
+                const ws = XLSX.utils.json_to_sheet(processedData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Cleaned List");
+                XLSX.writeFile(wb, `Cleaned_List_${new Date().toISOString().split('T')[0]}.xlsx`);
+            };
+
+            return (
+                <div className="container">
+                    <header className="header">
+                        <h1 className="title">Contact Opt-Out Tool</h1>
+                        <p className="subtitle">Identify and exclude Board/Staff from opt-out lists</p>
+                    </header>
+
+                    <div className="section">
+                        <h2 className="section-title">1. Upload Contact List</h2>
+                        <div className="upload-area" onClick={() => document.getElementById('fileInput').click()}>
+                            <input type="file" id="fileInput" className="hidden" accept=".xlsx,.csv" onChange={handleFileUpload} />
+                            <p>{fileName ? `📄 ${fileName}` : "Click or drag to upload Excel or CSV"}</p>
+                        </div>
+                        {masterData && (
+                            <div style={{marginTop: '16px'}}>
+                                <label style={{fontSize: '0.875rem', fontWeight: 600}}>Select Email Column:</label>
+                                <select className="select" value={emailColumn} onChange={e => setEmailColumn(e.target.value)}>
+                                    {Object.keys(masterData[0]).map(col => <option key={col} value={col}>{col}</option>)}
+                                </select>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="section">
+                        <h2 className="section-title">2. Board & Staff Removal List</h2>
+                        <textarea 
+                            className="textarea" 
+                            value={removalText} 
+                            onChange={e => setRemovalText(e.target.value)}
+                        />
+                    </div>
+
+                    <button className="button button-primary" onClick={processList} disabled={!masterData}>
+                        Preview Results & Matches
+                    </button>
+
+                    {processedData && (
+                        <div style={{marginTop: '32px'}}>
+                            <div className="stats">
+                                <div className="stat-card">
+                                    <div className="stat-value">{stats.total}</div>
+                                    <div className="stat-label">Original Records</div>
+                                </div>
+                                <div className="stat-card" style={{border: '1px solid #fee2e2'}}>
+                                    <div className="stat-value" style={{color: '#dc2626'}}>{stats.removed}</div>
+                                    <div className="stat-label">Excluded Matches</div>
+                                </div>
+                                <div className="stat-card" style={{border: '1px solid #dcfce7'}}>
+                                    <div className="stat-value" style={{color: '#16a34a'}}>{stats.remaining}</div>
+                                    <div className="stat-label">Ready for Opt-Out</div>
+                                </div>
+                            </div>
+
+                            <div className="review-grid">
+                                <div className="section" style={{background: '#fff5f5', borderColor: '#fecaca'}}>
+                                    <h2 className="section-title" style={{color: '#991b1b'}}>
+                                        Visual Confirmation: Records to Exclude
+                                        <span className="badge">{removedMatches.length} matches found</span>
+                                    </h2>
+                                    <p style={{fontSize: '0.825rem', marginBottom: '10px', color: '#b91c1c'}}>
+                                        These records matched your removal list and <strong>will not</strong> be in the final download.
+                                    </p>
+                                    <div className="table-container">
+                                        <table className="table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Type</th>
+                                                    <th>Matched On</th>
+                                                    {Object.keys(masterData[0]).slice(0, 3).map(h => <th key={h}>{h}</th>)}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {removedMatches.length > 0 ? removedMatches.map((row, i) => (
+                                                    <tr key={i}>
+                                                        <td>
+                                                            <span className={`match-tag ${row._matchReason === 'Domain' ? 'tag-domain' : 'tag-email'}`}>
+                                                                {row._matchReason}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{fontWeight: '600'}}>{row._matchValue}</td>
+                                                        {Object.keys(masterData[0]).slice(0, 3).map(h => <td key={h}>{String(row[h])}</td>)}
+                                                    </tr>
+                                                )) : <tr><td colSpan="5" style={{textAlign:'center', padding: '20px'}}>No matches found. All records will be kept.</td></tr>}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div className="section" style={{background: '#f0fdf4', borderColor: '#bbf7d0'}}>
+                                    <h2 className="section-title" style={{color: '#166534'}}>
+                                        Cleaned List Preview
+                                        <span className="badge">{processedData.length} records kept</span>
+                                    </h2>
+                                    <div className="table-container">
+                                        <table className="table">
+                                            <thead>
+                                                <tr>
+                                                    {Object.keys(processedData[0]).slice(0, 4).map(h => <th key={h}>{h}</th>)}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {processedData.slice(0, 10).map((row, i) => (
+                                                    <tr key={i}>
+                                                        {Object.keys(processedData[0]).slice(0, 4).map(h => <td key={h}>{String(row[h])}</td>)}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{marginTop: '24px', textAlign: 'right', paddingBottom: '40px'}}>
+                                <button className="button button-success" onClick={downloadFile}>
+                                    Download Cleaned List (.xlsx)
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

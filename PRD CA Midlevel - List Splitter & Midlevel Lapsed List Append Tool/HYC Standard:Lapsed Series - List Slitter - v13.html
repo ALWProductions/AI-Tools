@@ -1,0 +1,1752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HYC List Splitter Tool v12.7</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        :root {
+            --bg:           #f2f2f0;
+            --surface:      #ffffff;
+            --surface2:     #f7f7f5;
+            --border:       #ddddd8;
+            --border-dark:  #bbbbb5;
+            --text:         #1a1a1a;
+            --text-dim:     #666660;
+            --text-dimmer:  #99998f;
+            --accent-std:   #2563eb;
+            --accent-lapsed:#b45309;
+            --green:        #16a34a;
+            --red:          #dc2626;
+            --mono: 'IBM Plex Mono', monospace;
+            --sans: 'IBM Plex Sans', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* ─── HEADER ─────────────────────────────────── */
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 20px 36px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .header h1 {
+            font-family: var(--mono);
+            font-size: 1.05em;
+            font-weight: 600;
+            color: var(--text);
+            margin: 0;
+        }
+        .header-sub {
+            font-family: var(--mono);
+            font-size: 0.72em;
+            color: var(--text-dimmer);
+        }
+        .header-actions {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .doc-btn {
+            font-family: var(--mono);
+            font-size: 0.7em;
+            font-weight: 600;
+            background: var(--surface);
+            border: 1px solid var(--border-dark);
+            color: var(--text);
+            padding: 5px 12px;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .doc-btn:hover {
+            background: var(--bg);
+        }
+        .version-tag {
+            font-family: var(--mono);
+            font-size: 0.68em;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            padding: 2px 8px;
+            color: var(--text-dimmer);
+        }
+
+        /* ─── TWO-PANEL WORKSPACE ────────────────────── */
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+        }
+
+        .panel {
+            background: var(--surface);
+            padding: 28px 32px;
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+        .panel:last-child { border-right: none; }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .panel-dot {
+            width: 9px; height: 9px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .panel-std .panel-dot    { background: var(--accent-std); }
+        .panel-lapsed .panel-dot { background: var(--accent-lapsed); }
+
+        .panel-title {
+            font-family: var(--mono);
+            font-size: 0.78em;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .panel-std .panel-title    { color: var(--accent-std); }
+        .panel-lapsed .panel-title { color: var(--accent-lapsed); }
+
+        .panel-badge {
+            margin-left: auto;
+            font-family: var(--mono);
+            font-size: 0.62em;
+            padding: 2px 7px;
+            border: 1px solid var(--border-dark);
+            color: var(--text-dimmer);
+            border-radius: 2px;
+        }
+
+        /* ─── CONFIG ─────────────────────────────────── */
+        .config-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .config-item label {
+            display: block;
+            font-family: var(--mono);
+            font-size: 0.62em;
+            color: var(--text-dimmer);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 3px;
+        }
+        .config-item input {
+            width: 100%;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 7px 9px;
+            font-family: var(--mono);
+            font-size: 0.78em;
+            outline: none;
+            transition: border-color 0.15s;
+            border-radius: 2px;
+        }
+        .config-item input:focus { border-color: var(--border-dark); }
+
+        /* ─── UPLOAD ─────────────────────────────────── */
+        .upload-area {
+            border: 1px dashed var(--border-dark);
+            padding: 24px 16px;
+            text-align: center;
+            background: var(--surface2);
+            transition: all 0.15s;
+            margin: 14px 0;
+            border-radius: 2px;
+        }
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--text-dim);
+            background: #efefec;
+        }
+        .upload-area.loaded { border-style: solid; }
+        .panel-std .upload-area.loaded    { border-color: var(--accent-std); }
+        .panel-lapsed .upload-area.loaded { border-color: var(--accent-lapsed); }
+
+        .upload-area input[type="file"] { display: none; }
+        .upload-text {
+            font-family: var(--mono);
+            font-size: 0.72em;
+            color: var(--text-dimmer);
+            margin-bottom: 8px;
+        }
+        .upload-btn {
+            display: inline-block;
+            padding: 6px 16px;
+            font-family: var(--mono);
+            font-size: 0.7em;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--border-dark);
+            color: var(--text);
+            background: var(--surface);
+            border-radius: 2px;
+            transition: all 0.15s;
+        }
+        .upload-btn:hover { background: var(--bg); }
+        .upload-filename {
+            font-family: var(--mono);
+            font-size: 0.72em;
+            margin-top: 7px;
+            font-weight: 600;
+        }
+        .panel-std .upload-filename    { color: var(--accent-std); }
+        .panel-lapsed .upload-filename { color: var(--accent-lapsed); }
+
+        /* ─── PROCESS BTN ────────────────────────────── */
+        .process-btn {
+            width: 100%;
+            padding: 11px;
+            font-family: var(--mono);
+            font-size: 0.76em;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s;
+            border-radius: 2px;
+            margin-bottom: 12px;
+        }
+        .process-btn:disabled {
+            background: var(--surface2);
+            border-color: var(--border);
+            color: var(--text-dimmer);
+            cursor: not-allowed;
+        }
+        .panel-std .process-btn:not(:disabled) {
+            background: var(--accent-std);
+            border-color: var(--accent-std);
+            color: #fff;
+        }
+        .panel-lapsed .process-btn:not(:disabled) {
+            background: var(--accent-lapsed);
+            border-color: var(--accent-lapsed);
+            color: #fff;
+        }
+        .process-btn:not(:disabled):hover { opacity: 0.88; }
+
+        /* ─── LOG ────────────────────────────────────── */
+        .log-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            padding: 0 2px;
+        }
+        .log-toolbar span {
+            font-family: var(--mono);
+            font-size: 0.65em;
+            color: var(--text-dimmer);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .log-dl-btn {
+            font-family: var(--mono);
+            font-size: 0.65em;
+            color: var(--text-dim);
+            background: none;
+            border: none;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .log-dl-btn:hover { color: var(--text); }
+
+        .log-container {
+            background: #1c1c1c;
+            border: 1px solid #333;
+            padding: 10px 12px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-family: var(--mono);
+            font-size: 0.68em;
+            border-radius: 2px;
+        }
+        .log-entry { padding: 1px 0; }
+        .log-entry.info    { color: #60a5fa; }
+        .log-entry.success { color: #4ade80; }
+        .log-entry.error   { color: #f87171; }
+        .log-entry.warn    { color: #fbbf24; }
+        .log-entry.dim     { color: #555; }
+
+        /* ─── RESULTS ────────────────────────────────── */
+        .results-outer {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 28px 32px;
+            display: none;
+        }
+        .results-title {
+            font-family: var(--mono);
+            font-size: 0.72em;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-dimmer);
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .stats-strip {
+            display: flex;
+            border: 1px solid var(--border);
+            margin-bottom: 22px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .stat-cell {
+            flex: 1;
+            padding: 12px 14px;
+            border-right: 1px solid var(--border);
+            text-align: center;
+            background: var(--surface2);
+        }
+        .stat-cell:last-child { border-right: none; }
+        .stat-num {
+            font-family: var(--mono);
+            font-size: 1.4em;
+            font-weight: 600;
+            display: block;
+            line-height: 1;
+            margin-bottom: 3px;
+            color: var(--text);
+        }
+        .stat-num.blue  { color: var(--accent-std); }
+        .stat-num.amber { color: var(--accent-lapsed); }
+        .stat-num.green { color: var(--green); }
+        .stat-num.red   { color: var(--red); }
+        .stat-lbl {
+            font-family: var(--mono);
+            font-size: 0.58em;
+            color: var(--text-dimmer);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        /* Post-Processing Actions */
+        .actions-strip {
+            display: flex;
+            gap: 14px;
+            margin-bottom: 22px;
+            padding-bottom: 22px;
+            border-bottom: 1px dashed var(--border);
+        }
+        .actions-strip .process-btn {
+            margin-bottom: 0;
+            background: var(--surface2);
+            color: var(--text);
+            border-color: var(--border-dark);
+            flex: 1;
+        }
+        .std-results .actions-strip .process-btn:hover { background: var(--accent-std); color: #fff; border-color: var(--accent-std); }
+        .lapsed-results .actions-strip .process-btn:hover { background: var(--accent-lapsed); color: #fff; border-color: var(--accent-lapsed); }
+
+        .downloads-label {
+            font-family: var(--mono);
+            font-size: 0.65em;
+            color: var(--text-dimmer);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 10px;
+        }
+        .download-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+        .dl-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            padding: 12px 14px;
+            border-radius: 2px;
+        }
+        .dl-card.featured { border-color: var(--border-dark); background: var(--surface); }
+        .dl-name {
+            font-family: var(--mono);
+            font-size: 0.73em;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 2px;
+        }
+        .dl-count {
+            font-family: var(--mono);
+            font-size: 0.63em;
+            color: var(--text-dimmer);
+            margin-bottom: 9px;
+        }
+        .dl-row { display: flex; gap: 6px; }
+        .dl-select {
+            flex: 1;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 5px 7px;
+            font-family: var(--mono);
+            font-size: 0.66em;
+            outline: none;
+            border-radius: 2px;
+        }
+        .dl-btn {
+            padding: 5px 12px;
+            font-family: var(--mono);
+            font-size: 0.66em;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: opacity 0.15s;
+            white-space: nowrap;
+        }
+        .dl-btn:hover { opacity: 0.82; }
+        .std-results .dl-btn    { background: var(--accent-std);    color: #fff; }
+        .lapsed-results .dl-btn { background: var(--accent-lapsed); color: #fff; }
+
+        .section-divider {
+            font-family: var(--mono);
+            font-size: 0.63em;
+            color: var(--text-dimmer);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 10px 0 6px;
+            border-top: 1px solid var(--border);
+            margin: 2px 0 8px;
+        }
+
+        /* ─── MODAL ──────────────────────────────────── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border-dark);
+            max-width: 1080px;
+            width: 100%;
+            max-height: 88vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 3px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+        }
+        .modal-header {
+            padding: 16px 22px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+            background: var(--surface2);
+        }
+        .modal-title {
+            font-family: var(--mono);
+            font-size: 0.82em;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .modal-subtitle {
+            font-family: var(--mono);
+            font-size: 0.65em;
+            color: var(--text-dimmer);
+        }
+        .modal-close {
+            margin-left: auto;
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            padding: 4px 10px;
+            font-family: var(--mono);
+            font-size: 0.7em;
+            cursor: pointer;
+            border-radius: 2px;
+        }
+        .modal-close:hover { border-color: var(--border-dark); }
+
+        .modal-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            background: var(--surface2);
+        }
+        .modal-tab {
+            padding: 9px 18px;
+            font-family: var(--mono);
+            font-size: 0.7em;
+            cursor: pointer;
+            border: none;
+            border-right: 1px solid var(--border);
+            border-bottom: 2px solid transparent;
+            color: var(--text-dimmer);
+            background: transparent;
+            transition: all 0.12s;
+        }
+        .modal-tab:hover { color: var(--text); }
+        .modal-tab.active { color: var(--text); border-bottom-color: var(--accent-std); background: var(--surface); }
+        .modal-tab .tab-count {
+            display: inline-block;
+            margin-left: 5px;
+            background: var(--border);
+            padding: 1px 5px;
+            border-radius: 2px;
+            font-size: 0.85em;
+        }
+        .modal-tab.has-items .tab-count { background: #fee2e2; color: var(--red); }
+
+        .modal-body { overflow-y: auto; flex: 1; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+
+        .preview-table-wrap { overflow-x: auto; }
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--mono);
+            font-size: 0.68em;
+        }
+        .preview-table th {
+            background: var(--surface2);
+            padding: 7px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-dimmer);
+            font-weight: 500;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .preview-table td {
+            padding: 6px 10px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-dim);
+            max-width: 190px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            vertical-align: top;
+        }
+        .preview-table tr:hover td { background: var(--surface2); }
+        .preview-table td.reason-cell { 
+            color: var(--red); 
+            white-space: normal; 
+            min-width: 320px; 
+        }
+        .preview-table td.keep-cell   { text-align: center; }
+        .keep-checkbox { width: 14px; height: 14px; cursor: pointer; accent-color: var(--green); }
+        .row-rescue td { background: #f0fdf4 !important; }
+
+        .empty-pane {
+            padding: 44px;
+            text-align: center;
+            font-family: var(--mono);
+            font-size: 0.74em;
+            color: var(--text-dimmer);
+        }
+
+        .modal-footer {
+            padding: 12px 22px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+            background: var(--surface2);
+        }
+        .modal-footer-info {
+            font-family: var(--mono);
+            font-size: 0.68em;
+            color: var(--text-dimmer);
+            flex: 1;
+        }
+        .modal-action-btn {
+            padding: 9px 20px;
+            font-family: var(--mono);
+            font-size: 0.74em;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: opacity 0.15s;
+        }
+        .modal-action-btn:hover { opacity: 0.85; }
+        .btn-confirm { background: var(--green);   color: #fff; }
+        .btn-cancel  { background: var(--surface); color: var(--text-dim); border: 1px solid var(--border-dark); }
+
+        .select-controls {
+            padding: 7px 10px;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 14px;
+            align-items: center;
+            font-family: var(--mono);
+            font-size: 0.66em;
+            color: var(--text-dimmer);
+        }
+        .select-link { color: var(--accent-std); cursor: pointer; text-decoration: underline; }
+
+        @media (max-width: 820px) {
+            .workspace { grid-template-columns: 1fr; }
+            .panel { border-right: none; }
+            .config-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>HYC List Splitter</h1>
+    <span class="header-sub">Standard &amp; Lapsed pipeline</span>
+    <div class="header-actions">
+        <button class="doc-btn" onclick="generateDocsPDF()">↓ Download Tool Docs (PDF)</button>
+        <span class="version-tag">v12.7</span>
+    </div>
+</div>
+
+<div class="workspace">
+
+    <div class="panel panel-std" id="stdPanel">
+        <div class="panel-header">
+            <div class="panel-dot"></div>
+            <div class="panel-title">Standard HYC</div>
+            <span class="panel-badge">hycstandard / hycmidlevel</span>
+        </div>
+        <div class="config-row">
+            <div class="config-item">
+                <label>Site/Group Column</label>
+                <input type="text" id="std_siteCol" value="site_acronym">
+            </div>
+            <div class="config-item">
+                <label>Wealth Score Column</label>
+                <input type="text" id="std_scoreCol" value="top tier score">
+            </div>
+        </div>
+        <div class="config-row">
+            <div class="config-item">
+                <label>Email Column</label>
+                <input type="text" id="std_emailCol" value="email address">
+            </div>
+            <div class="config-item">
+                <label>Dedupe ID Column</label>
+                <input type="text" id="std_dedupeCol" value="hyc id">
+            </div>
+        </div>
+        <div class="config-row">
+            <div class="config-item">
+                <label>Mid-Level Top %</label>
+                <input type="number" id="std_percent" value="10" min="1" max="100">
+            </div>
+        </div>
+        <div class="upload-area" id="std_uploadArea">
+            <input type="file" id="std_fileInput" accept=".xlsx,.xls,.csv">
+            <div class="upload-text">Drop Excel or CSV here</div>
+            <label for="std_fileInput" class="upload-btn">Select File</label>
+            <div class="upload-filename" id="std_fileName"></div>
+        </div>
+        <button class="process-btn" id="std_processBtn" disabled>Clean &amp; Process Standard HYC</button>
+        <div class="log-toolbar">
+            <span>Activity Log</span>
+            <button class="log-dl-btn" onclick="downloadLog('std')">Save .txt</button>
+        </div>
+        <div class="log-container" id="std_log">
+            <div class="log-entry dim">[ready] Waiting for Standard HYC file...</div>
+        </div>
+    </div>
+
+    <div class="panel panel-lapsed" id="lapsedPanel">
+        <div class="panel-header">
+            <div class="panel-dot"></div>
+            <div class="panel-title">Lapsed HYC</div>
+            <span class="panel-badge">lapsedstandard / lapsedmidlevel</span>
+        </div>
+        <div class="config-row">
+            <div class="config-item">
+                <label>Site/Group Column</label>
+                <input type="text" id="lapsed_siteCol" value="site_acronym">
+            </div>
+            <div class="config-item">
+                <label>Wealth Score Column</label>
+                <input type="text" id="lapsed_scoreCol" value="top tier score">
+            </div>
+        </div>
+        <div class="config-row">
+            <div class="config-item">
+                <label>Email Column</label>
+                <input type="text" id="lapsed_emailCol" value="email address">
+            </div>
+            <div class="config-item">
+                <label>Dedupe ID Column</label>
+                <input type="text" id="lapsed_dedupeCol" value="email address">
+            </div>
+        </div>
+        <div class="config-row">
+            <div class="config-item">
+                <label>Mid-Level Top %</label>
+                <input type="number" id="lapsed_percent" value="10" min="1" max="100">
+            </div>
+        </div>
+        <div class="upload-area" id="lapsed_uploadArea">
+            <input type="file" id="lapsed_fileInput" accept=".xlsx,.xls,.csv">
+            <div class="upload-text">Drop Excel or CSV here</div>
+            <label for="lapsed_fileInput" class="upload-btn">Select File</label>
+            <div class="upload-filename" id="lapsed_fileName"></div>
+        </div>
+        <button class="process-btn" id="lapsed_processBtn" disabled>Clean &amp; Process Lapsed HYC</button>
+        <div class="log-toolbar">
+            <span>Activity Log</span>
+            <button class="log-dl-btn" onclick="downloadLog('lapsed')">Save .txt</button>
+        </div>
+        <div class="log-container" id="lapsed_log">
+            <div class="log-entry dim">[ready] Waiting for Lapsed HYC file...</div>
+        </div>
+    </div>
+</div>
+
+<div class="results-outer std-results"    id="std_results"></div>
+<div class="results-outer lapsed-results" id="lapsed_results"></div>
+
+<div class="modal-overlay" id="previewModal">
+    <div class="modal">
+        <div class="modal-header">
+            <div>
+                <div class="modal-title" id="modalTitle">Cleaning Preview</div>
+                <div class="modal-subtitle" id="modalSubtitle">Uncheck any row to rescue it back into the final list.</div>
+            </div>
+            <button class="modal-close" onclick="cancelPreview()">✕ Cancel</button>
+        </div>
+        <div class="modal-tabs" id="modalTabs"></div>
+        <div class="modal-body"  id="modalBody"></div>
+        <div class="modal-footer">
+            <div class="modal-footer-info" id="modalFooterInfo"></div>
+            <button class="modal-action-btn btn-cancel"  onclick="cancelPreview()">Cancel</button>
+            <button class="modal-action-btn btn-confirm" onclick="confirmCleaning()">✓ Confirm &amp; Process</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────
+const state = {
+    std:    { rawData: [], fileName: '', originalInputCount: 0, auditLog: [], removed: { id: [], fake: [], email: [] } },
+    lapsed: { rawData: [], fileName: '', originalInputCount: 0, auditLog: [], removed: { id: [], fake: [], email: [] }, originalMultiIdRows: [] }
+};
+let pendingClean = null;
+const dlStore    = {};
+
+// ─── LOGGING & TXT DOWNLOAD ──────────────────────────────────
+
+function addAudit(lt, text) {
+    const t = new Date().toLocaleTimeString('en-US', {hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    state[lt].auditLog.push(`[${t}] ${text}`);
+}
+
+function addLog(lt, msg, type = 'info') {
+    const el = document.getElementById(`${lt}_log`);
+    const d  = document.createElement('div');
+    d.className = `log-entry ${type}`;
+    const t = new Date().toLocaleTimeString('en-US', {hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    d.textContent = `[${t}] ${msg}`;
+    el.appendChild(d);
+    el.scrollTop = el.scrollHeight;
+    state[lt].auditLog.push(`[${t}] [${type.toUpperCase()}] ${msg}`);
+}
+
+function downloadLog(lt) {
+    const segmentName = lt === 'std' ? 'Standard HYC' : 'Lapsed HYC';
+    const header = `==========================================================\n` +
+                   ` HYC LIST SPLITTER — PROCESS AUDIT LOG\n` +
+                   ` Segment:  ${segmentName}\n` +
+                   ` File:     ${state[lt].fileName || 'Unknown'}\n` +
+                   ` Date:     ${new Date().toLocaleString()}\n` +
+                   `==========================================================\n\n`;
+
+    const textContent = header + state[lt].auditLog.join('\n');
+    const blob = new Blob([textContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    
+    a.href = url;
+    a.download = `Audit_Log_${segmentName.replace(' ','_')}_${new Date().toISOString().slice(0,10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    addLog(lt, 'Audit log downloaded successfully.', 'success');
+}
+
+// ─── GENERATE PDF DOCUMENTATION ──────────────────────────────
+function generateDocsPDF() {
+    if (!window.jspdf) {
+        alert("PDF Library not loaded yet. Please try again in a moment.");
+        return;
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    let y = 20;
+
+    const addText = (text, size = 10, isBold = false, indent = 0) => {
+        doc.setFontSize(size);
+        doc.setFont("helvetica", isBold ? "bold" : "normal");
+        const lines = doc.splitTextToSize(text, 170 - indent);
+        
+        if (y + (lines.length * 5) > 280) {
+            doc.addPage();
+            y = 20;
+        }
+        doc.text(lines, 20 + indent, y);
+        y += (lines.length * 6);
+    };
+
+    // INTRO
+    addText("HYC LIST SPLITTER TOOL - COMPLETE USER GUIDE", 16, true);
+    addText("Version 12.7 — Comprehensive Operating Handbook", 10, false);
+    y += 4;
+    addText("This tool is a completely self-contained file processor designed to take massive spreadsheets of donor data and split them into localized 'Standard' or 'Mid-Level' campaign lists for individual marketing sites. It runs entirely inside your web browser. No data ever leaves your computer or uploads to an external server.", 10, false);
+    y += 4;
+
+    // THE WORKSPACE CHANNELS
+    addText("1. UNDERSTANDING THE TWO MAIN PANELS", 12, true);
+    addText("The screen is divided into two separate, independent processing pipelines. Choose the panel that matches your current campaign objective:", 10, false);
+    addText("• BLUE PANEL (Standard HYC): Used for your active campaign audience files. By default, it looks for an ID column named 'hyc id' and checks for duplicate rows. It does NOT modify or touch individual donor IDs inside cells.", 10, false, 4);
+    addText("• AMBER PANEL (Lapsed HYC): Used for historically lapsed campaign files. By default, it evaluates duplicate rows based on their Email Address. It contains a specialized text scanner to strip out accidental multiple 'con-#####' entries inside single spreadsheet cells.", 10, false, 4);
+    y += 4;
+
+    // THE FIELD INPUT CONFIGURATIONS
+    addText("2. THE SETTINGS BOXES EXPLAINED (WHAT TO TYPE)", 12, true);
+    addText("At the top of each panel are text boxes. The tool checks what you type here against the column headers in your file. If it cannot find an exact spelling, it tries smart fuzzy fallback options automatically:", 10, false);
+    addText("• Site/Group Column: Tells the tool which column identifies the site location (e.g., 'site_acronym'). It uses this to group your file.", 10, false, 4);
+    addText("• Wealth Score Column: The column containing numbers used to rank donors (e.g., 'top tier score'). Higher numbers win.", 10, false, 4);
+    addText("• Email Column: The column holding donor email addresses used for verification sweeps.", 10, false, 4);
+    addText("• Dedupe ID Column: The critical column used to spot duplicate rows. Standard files look at 'hyc id' by default, while Lapsed files look at 'email address'.", 10, false, 4);
+    addText("• Mid-Level Top %: The mathematically calculated percentage cutoff. If set to 10%, the top 10% highest wealth scores in each site are split out into the Mid-Level category, while the lower 90% go to Standard.", 10, false, 4);
+    y += 4;
+
+    // THE CON PREVIEW STEP
+    addText("3. SPECIAL STEP: THE LAPSED MULTI-ID PREVIEW PANEL", 12, true);
+    addText("When you drop a spreadsheet into the Amber Lapsed Panel, the tool scans the 'Donor Record ID(s) WF' or 'bbcrm-lookupid' column instantly. If it finds single cells containing multiple packed entries like 'con-12345 con-67890', it pauses and pops up a preview window:", 10, false);
+    addText("• By default, all rows are checked, which means you allow the tool to drop the extra IDs and save only the first 'con-#####' item.", 10, false, 4);
+    addText("• If you uncheck a row, you tell the tool to REVERT and preserve the original, long messy string exactly as it was loaded.", 10, false, 4);
+    addText("• When you click 'Confirm', the tool remembers your choices, cleans the checked cells, and unlocks the big process button.", 10, false, 4);
+    y += 4;
+
+    // THE MAIN CLEANING PIPELINE
+    addText("4. STEP-BY-STEP OPERATION WALKTHROUGH", 12, true);
+    addText("Step 1: Check your configuration text boxes to ensure they represent your file parameters.", 10, false, 4);
+    addText("Step 2: Drag your Excel (.xlsx) or CSV (.csv) file and drop it directly onto the shaded box. Alternatively, click 'Select File' to browse your computer.", 10, false, 4);
+    addText("Step 3: Click the big 'Clean & Process' button. The system immediately scans your file for two serious defects simultaneously:", 10, false, 4);
+    addText("  A. Fake/Missing Emails: Any blank cell, broken syntax, or garbage placeholder string like 'none@', 'noreply@', or 'na@' is isolated.", 10, false, 8);
+    addText("  B. Row Duplicates: The system evaluates your Dedupe ID column. If an ID or Email appears multiple times on separate rows, it groups them and checks their Wealth Score. The row with the highest score is kept; secondary matching rows are flagged for removal.", 10, false, 8);
+    addText("Step 4: Review the Cleaning Popup Window. Before anything is deleted, a grid displays every flagged bad email and duplicate row. Uncheck a row to 'rescue' it back into your main dataset. Click 'Confirm & Process'.", 10, false, 4);
+    y += 4;
+
+    // POST PROCESSING AND DOWNLOADING
+    addText("5. EVALUATING RESULTS AND EXPORTING DATA", 12, true);
+    addText("Once processed, data charts generate at the bottom of the tool displaying total row balances:", 10, false);
+    addText("• Optional: Dedupe by Email Button: Click this to perform a global email deduplication sweep across your final compiled data. It protects category priorities (Mid-Level wins over Standard).", 10, false, 4);
+    addText("• Full Segmented List Card: Saves your entire processed file as a single entity with a brand new column titled 'hycsegment' labeling each row.", 10, false, 4);
+    addText("• Individual Site Cards: Displays an alphabetical list of every individual site. Click 'Save' to export a clean file containing ONLY that site's calculated Mid-Level cohort.", 10, false, 4);
+    addText("• Removed Logs & Backup Cards: Underneath the main downloads, individual logs are provided for tracking everything deleted (ID Duplicates, Fake Emails). For Lapsed files, a specialized brown card titled 'Original Multi-ID Rows (Pre-Cleaned)' allows you to download a complete backup of those modified rows in their original messy layout.", 10, false, 4);
+
+    doc.save("HYC_List_Splitter_v12_7_Documentation.pdf");
+}
+
+// ─── COLUMN RESOLVER (case/space/dash/slash insensitive) ──────
+function resolveColumn(userInput, headers) {
+    if (!userInput) return null;
+    const norm = s => s.toLowerCase().replace(/[\s_\-\/\(\)]/g, '');
+    const target = norm(userInput);
+    return headers.find(h => norm(h) === target) || null;
+}
+
+function resolveSiteColumn(headers, userInput) {
+    let match = resolveColumn(userInput, headers);
+    if (match) return match;
+    const fallbacks = ['site', 'siteacronym', 'site_acronym', 'site acronym', 'acronym', 'site-acronym', 'location'];
+    for (let f of fallbacks) { match = resolveColumn(f, headers); if (match) return match; }
+    return null;
+}
+
+function resolveEmailColumn(headers, userInput) {
+    let match = resolveColumn(userInput, headers);
+    if (match) return match;
+    const fallbacks = ['email', 'emailaddress', 'emailemail', 'primaryemail'];
+    for (let f of fallbacks) { match = resolveColumn(f, headers); if (match) return match; }
+    return null;
+}
+
+function resolveScoreColumn(headers, userInput) {
+    let match = resolveColumn(userInput, headers);
+    if (match) return match;
+    const fallbacks = ['toptierscore', 'modelscore', 'score', 'top tier score', 'top-tier-score', 'model score', 'model-score', 'model_score'];
+    for (let f of fallbacks) { match = resolveColumn(f, headers); if (match) return match; }
+    return null;
+}
+
+// ─── INTERACTIVE LAPSED ID SCRUBBER ──────────────────────────
+function initiateLapsedIdScrub(parsedData) {
+    state.lapsed.originalMultiIdRows = [];
+    const headers = Object.keys(parsedData[0] || {});
+    
+    // Check for either 'Donor Record ID(s) WF' or 'bbcrm-lookupid'
+    const targetCol = resolveColumn('donorrecordidswf', headers) || resolveColumn('bbcrmlookupid', headers);
+
+    if (!targetCol) {
+        addLog('lapsed', `Column "Donor Record ID(s) WF" or "bbcrm-lookupid" not identified. Skipping multi-token preview layout.`, 'warn');
+        state.lapsed.rawData = parsedData;
+        document.getElementById('lapsed_processBtn').disabled = false;
+        return;
+    }
+
+    const flaggedItems = [];
+    parsedData.forEach((row, idx) => {
+        if (!row[targetCol]) return;
+        const valStr = String(row[targetCol]);
+        const tokens = valStr.match(/con-\d+/gi);
+        if (tokens && tokens.length > 1) {
+            flaggedItems.push({
+                index: idx,
+                original: valStr,
+                suggested: tokens[0],
+                rowRef: row,
+                _removeReason: `Packed formatting cell: [${valStr}] &rarr; Clean value: [${tokens[0]}]`
+            });
+        }
+    });
+
+    if (flaggedItems.length === 0) {
+        addLog('lapsed', `Scanned Lapsed "${targetCol}" column. All rows are format clean.`, 'info');
+        state.lapsed.rawData = parsedData;
+        document.getElementById('lapsed_processBtn').disabled = false;
+        return;
+    }
+
+    addLog('lapsed', `Discovered ${flaggedItems.length} records with multiple "con-#####" entries in column "${targetCol}". Opening verification window...`, 'warn');
+
+    openGenericModal('lapsed', 'Multi-ID Cell Truncation', 
+        [{ id: 'tab_con_scrub', label: 'Packed cells detected', rows: flaggedItems, stepType: 'con' }], 
+        parsedData, 
+        (rescuedAll) => {
+            const finalDataset = [...parsedData];
+            addAudit('lapsed', `\n--- MULTI-ID CELL TRUNCATION REVIEW ---`);
+            
+            flaggedItems.forEach((item, idx) => {
+                const checkbox = document.getElementById(`tab_con_scrub_row_${idx}`);
+                if (checkbox && checkbox.checked) {
+                    // Populate structural backup row exactly as it was before clean
+                    state.lapsed.originalMultiIdRows.push({ ...item.rowRef });
+                    
+                    // Apply change
+                    finalDataset[item.index] = { ...item.rowRef, [targetCol]: item.suggested };
+                    addAudit('lapsed', `[ROW ${item.index + 2}] Executed cell cleanup. Original: "${item.original}" -> Truncated: "${item.suggested}"`);
+                } else {
+                    addAudit('lapsed', `[ROW ${item.index + 2}] Reverted cleaning rule (kept raw formatting): "${item.original}"`);
+                }
+            });
+            
+            addAudit('lapsed', `--- END ID TRUNCATION REVIEW ---\n`);
+            state.lapsed.rawData = finalDataset;
+            addLog('lapsed', `Cell changes committed. Found ${state.lapsed.originalMultiIdRows.length} confirmed alterations. Ready for processing.`, 'success');
+            document.getElementById('lapsed_processBtn').disabled = false;
+        }
+    );
+}
+
+// ─── FILE LOADING ─────────────────────────────────────────────
+function setupFileInput(lt) {
+    const input = document.getElementById(`${lt}_fileInput`);
+    const area  = document.getElementById(`${lt}_uploadArea`);
+    input.addEventListener('change', e => loadFile(e.target.files[0], lt));
+    area.addEventListener('dragover',  e => { e.preventDefault(); area.classList.add('dragover'); });
+    area.addEventListener('dragleave', () => area.classList.remove('dragover'));
+    area.addEventListener('drop', e => {
+        e.preventDefault(); area.classList.remove('dragover');
+        if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0], lt);
+    });
+}
+
+function loadFile(file, lt) {
+    if (!file) return;
+    document.getElementById(`${lt}_fileName`).textContent = `✓  ${file.name}`;
+    state[lt].fileName = file.name;
+    state[lt].auditLog = []; 
+    state[lt].removed = { id: [], fake: [], email: [] };
+    if (lt === 'lapsed') state.lapsed.originalMultiIdRows = [];
+    
+    document.getElementById(`${lt}_uploadArea`).classList.add('loaded');
+    addLog(lt, `File selected: ${file.name}`, 'success');
+
+    const reader = new FileReader();
+    reader.onload = evt => {
+        try {
+            let parsedData = [];
+            if (file.name.toLowerCase().endsWith('.csv')) {
+                const text = new TextDecoder().decode(new Uint8Array(evt.target.result));
+                const parsed = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: false });
+                parsedData = parsed.data;
+            } else {
+                const dataBinary = new Uint8Array(evt.target.result);
+                const wb = XLSX.read(dataBinary, { type: 'array' });
+                parsedData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+            }
+            
+            if (!parsedData || parsedData.length === 0) {
+                throw new Error("No usable rows discovered inside arrays.");
+            }
+
+            const cols = Object.keys(parsedData[0] || {});
+            addAudit(lt, `\n--- FILE LOADED ---`);
+            addAudit(lt, `Filename: ${file.name}`);
+            addAudit(lt, `Total Records: ${parsedData.length}`);
+            addAudit(lt, `Detected Columns: ${cols.join(', ')}\n`);
+            
+            addLog(lt, `Loaded ${parsedData.length} rows.`, 'success');
+            
+            if (lt === 'lapsed') {
+                initiateLapsedIdScrub(parsedData);
+            } else {
+                state.std.rawData = parsedData;
+                document.getElementById(`${lt}_processBtn`).disabled = false;
+            }
+        } catch(err) {
+            addLog(lt, `Error reading file: ${err.message}`, 'error');
+            console.error(err);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// ─── FAKE EMAIL DETECTION ─────────────────────────────────────
+const FAKE_PATTERNS = [
+    /noemail/i, /no_email/i, /no\.email/i, /noemailaddress/i,
+    /donotcontact/i, /donotuse/i, /invalid/i, /unknown@/i,
+    /notavailable/i, /^na@/i, /\bn\/a\b/i,
+    /fake/i, /test@test/i, /\bexample\.com$/i, /placeholder/i,
+    /^none@/i, /^null@/i, /^nobody@/i, /^noreply@/i,
+    /^x{2,}@/i, /^xxx/i, /@none\./i, /@noemail\./i,
+    /refused/i
+];
+const FAKE_DOMAINS = new Set([
+    'mailinator.com','guerrillamail.com','temp-mail.org','throwam.com',
+    'maildrop.cc','trashmail.com','yopmail.com','dispostable.com',
+    'sharklasers.com','spam4.me','trashmail.me','guerrillamailblock.com'
+]);
+
+function isFakeEmail(val) {
+    if (val === null || val === undefined) return true;
+    const v = String(val).trim();
+    if (v === '') return true;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return true;
+    if (FAKE_PATTERNS.some(p => p.test(v))) return true;
+    const domain = v.split('@')[1]?.toLowerCase() || '';
+    return FAKE_DOMAINS.has(domain);
+}
+
+// ─── DEDUPLICATION (ROUTED PIPELINE) ───────────────────────────
+function deduplicateByScore(lt, rows, idCol, scoreCol) {
+    if (!idCol) return { kept: rows, removed: [] };
+    const groups = new Map();
+    const kept = [];
+    const removed = [];
+
+    addAudit(lt, `\n--- STARTING DE-DUPLICATION CHECK ---`);
+    addAudit(lt, `Target Key Column: "${idCol}" | Rank Resolver Column: "${scoreCol || 'not defined'}"`);
+
+    rows.forEach(row => {
+        const id = String(row[idCol] || '').trim();
+        if (!id) {
+            kept.push(row);
+        } else {
+            if (!groups.has(id)) groups.set(id, []);
+            groups.get(id).push(row);
+        }
+    });
+
+    let totalCollisions = 0;
+
+    groups.forEach((instances, id) => {
+        if (instances.length === 1) {
+            kept.push(instances[0]);
+        } else {
+            totalCollisions++;
+            instances.sort((a, b) => (parseFloat(b[scoreCol]) || 0) - (parseFloat(a[scoreCol]) || 0));
+            kept.push(instances[0]);
+            
+            let detailLog = `\nCollision discovered for token value: "${id}" (Found ${instances.length} occurrences)\n`;
+            
+            instances.forEach((inst, idx) => {
+                const score = inst[scoreCol] !== undefined ? inst[scoreCol] : 'N/A';
+                if (idx === 0) {
+                    detailLog += `   -> [KEPT]    Tiebreaker Rank: ${score}\n`;
+                } else {
+                    let reasonStr = `<strong>Duplicate Entry: "${id}"</strong><br>`;
+                    reasonStr += `<div style="margin-top:4px; padding:6px; background:var(--bg); border:1px solid var(--border); border-radius:2px; font-size:0.9em; line-height:1.4;">`;
+                    reasonStr += `<strong>Instances Found:</strong> ${instances.length}<br>`;
+                    reasonStr += `<strong>Score:</strong> ${score}<br>`;
+                    reasonStr += `<hr style="margin:4px 0; border:none; border-top:1px dashed var(--border-dark);">`;
+                    reasonStr += `<em><strong>Kept Record Score:</strong> ${instances[0][scoreCol] || 'N/A'}</em>`;
+                    reasonStr += `</div>`;
+
+                    removed.push({ ...inst, _removeReason: reasonStr });
+                    detailLog += `   -> [REMOVED] Tiebreaker Rank: ${score}\n`;
+                }
+            });
+            addAudit(lt, detailLog);
+        }
+    });
+
+    if (totalCollisions === 0) addAudit(lt, `No structural row record collisions detected.`);
+    addAudit(lt, `--- END PIPELINE DE-DUPLICATION CHECK ---\n`);
+
+    return { kept, removed };
+}
+
+// ─── MAIN PROCESS ─────────────────────────────────────────────
+function triggerProcess(lt) {
+    const rows = state[lt].rawData;
+    if (!rows.length) return addLog(lt, 'No data loaded.', 'error');
+    
+    state[lt].originalInputCount = rows.length;
+    state[lt].removed = { id: [], fake: [], email: [] };
+
+    const headers = Object.keys(rows[0] || {});
+
+    const siteColRaw   = document.getElementById(`${lt}_siteCol`).value.trim();
+    const scoreColRaw  = document.getElementById(`${lt}_scoreCol`).value.trim();
+    const emailColRaw  = document.getElementById(`${lt}_emailCol`).value.trim();
+    const dedupeColRaw = document.getElementById(`${lt}_dedupeCol`).value.trim();
+    const percent      = parseInt(document.getElementById(`${lt}_percent`).value) || 10;
+
+    const siteCol   = resolveSiteColumn(headers, siteColRaw);
+    const scoreCol  = resolveScoreColumn(headers, scoreColRaw);
+    const dedupeCol = resolveColumn(dedupeColRaw, headers);
+    const emailCol  = resolveEmailColumn(headers, emailColRaw); 
+
+    if (!siteCol) {
+        addLog(lt, `Site column could not be located. Available headers: ${headers.join(' | ')}`, 'error');
+        return;
+    }
+    
+    addLog(lt, `Mapped operational parameters — group: "${siteCol}" | score: "${scoreCol||'not found'}" | logic key: "${dedupeCol||'not found'}" | index email: "${emailCol||'not found'}"`, 'dim');
+    addAudit(lt, `--- PIPELINE INITIATED ---`);
+    addLog(lt, `Starting cleaning pipeline…`, 'info');
+
+    // Step 1: Fake Emails
+    addAudit(lt, `\n--- STARTING FAKE/MISSING EMAIL PROCESS ---`);
+    const fakeRemoved = [];
+    const afterFake = [];
+
+    if (emailCol) {
+        rows.forEach(row => {
+            if (isFakeEmail(row[emailCol])) {
+                const rawEmail = String(row[emailCol]||'');
+                fakeRemoved.push({ ...row, _removeReason: `Fake or missing email: "${rawEmail}"` });
+                addAudit(lt, `Flagged bad email: [${rawEmail}]`);
+            } else {
+                afterFake.push(row);
+            }
+        });
+    } else {
+        afterFake.push(...rows);
+        addLog(lt, 'Email column not found for fake email check.', 'warn');
+    }
+    addAudit(lt, `--- END FAKE/MISSING EMAIL PROCESS ---\n`);
+
+    // Step 2: Row Deduplication
+    const { kept: afterDedupe, removed: idDupeRows } = deduplicateByScore(lt, afterFake, dedupeCol, scoreCol);
+    
+    const tabs = [];
+    if (fakeRemoved.length > 0) {
+        tabs.push({ id: 'tab_fake_em', label: 'Fake/Missing Emails', rows: fakeRemoved, stepType: 'fake' });
+    }
+    if (idDupeRows.length > 0) {
+        tabs.push({ id: 'tab_id_dupe', label: `Row Duplicates (${idDupeRows.length})`, rows: idDupeRows, stepType: 'id' });
+    }
+
+    if (tabs.length === 0) {
+        addLog(lt, 'No data issues flagged. Proceeding to segmentation cohort calculation.', 'success');
+        runSegmentation(lt, afterDedupe, siteCol, scoreCol, percent);
+        return;
+    }
+
+    addLog(lt, `Identified ${fakeRemoved.length} missing/invalid emails and ${idDupeRows.length} duplicates. Displaying manual validation panel...`, 'warn');
+    
+    openGenericModal(lt, 'Initial Cleaning Preview', tabs, afterDedupe, (rescuedAll) => {
+        const finalData = [...afterDedupe, ...rescuedAll].map(r => {
+            const c = {...r}; delete c._removeReason; return c;
+        });
+        runSegmentation(lt, finalData, siteCol, scoreCol, percent);
+    });
+}
+
+// ─── POST PROCESSING OPTIONS ───────────────────────────────────
+
+function postProcessEmailDedupe(lt) {
+    const data = dlStore[`${lt}_combined`];
+    const emailColRaw = document.getElementById(`${lt}_emailCol`).value.trim();
+    const emailCol = resolveEmailColumn(Object.keys(data[0]||{}), emailColRaw);
+    const scoreColRaw = document.getElementById(`${lt}_scoreCol`).value.trim();
+    const scoreCol = resolveScoreColumn(Object.keys(data[0]||{}), scoreColRaw);
+    const seriesCol = resolveColumn('series', Object.keys(data[0]||{}));
+    
+    if(!emailCol) { addLog(lt, 'Email index field unresolvable.', 'error'); return; }
+
+    const midLabel = lt === 'lapsed' ? 'lapsedmidlevel' : 'hycmidlevel';
+    const groups = new Map();
+    const removed = [];
+    const cleanData = [];
+
+    data.forEach(row => {
+        const email = String(row[emailCol]||'').toLowerCase().trim();
+        if(!email) {
+            cleanData.push(row); 
+            return;
+        }
+        if(!groups.has(email)) groups.set(email, []);
+        groups.get(email).push(row);
+    });
+
+    addAudit(lt, `\n--- STARTING EMAIL DEDUPE PROCESS ---`);
+    addAudit(lt, `Using Email Column: "${emailCol}" | Prioritizing: Manual 'Standard' Series (if Lapsed) -> Segment "${midLabel}" -> Score: "${scoreCol}"`);
+
+    let totalCollisions = 0;
+
+    groups.forEach((instances, email) => {
+        if(instances.length === 1) {
+            cleanData.push(instances[0]);
+        } else {
+            totalCollisions++;
+            
+            // PRIORITY SORTING
+            instances.sort((a, b) => {
+                if (lt === 'lapsed' && seriesCol) {
+                    const aSeries = String(a[seriesCol]||'').toLowerCase().trim() === 'standard';
+                    const bSeries = String(b[seriesCol]||'').toLowerCase().trim() === 'standard';
+                    if (aSeries && !bSeries) return -1;
+                    if (!aSeries && bSeries) return 1;
+                }
+                
+                const aMid = a.hycsegment === midLabel;
+                const bMid = b.hycsegment === midLabel;
+                if (aMid && !bMid) return -1;
+                if (!aMid && bMid) return 1;
+                
+                return (parseFloat(b[scoreCol]) || 0) - (parseFloat(a[scoreCol]) || 0);
+            });
+
+            cleanData.push(instances[0]);
+            
+            let detailLog = `\nCollision found for Email: "${email}" (Appeared ${instances.length} times)\n`;
+            
+            instances.forEach((inst, idx) => {
+                const score = inst[scoreCol] !== undefined ? inst[scoreCol] : 'N/A';
+                const seg = inst.hycsegment || 'Unknown';
+                const ser = (lt === 'lapsed' && seriesCol) ? (inst[seriesCol] || 'blank') : 'N/A';
+                
+                if (idx === 0) {
+                    detailLog += `   -> [KEPT]    Segment: ${seg} | Series: ${ser} | Score: ${score}\n`;
+                } else {
+                    let reasonStr = `<strong>Duplicate Email: "${email}"</strong><br>`;
+                    reasonStr += `<div style="margin-top:4px; padding:6px; background:var(--bg); border:1px solid var(--border); border-radius:2px; font-size:0.9em; line-height:1.4;">`;
+                    reasonStr += `<strong>Instances Found:</strong> ${instances.length}<br>`;
+                    reasonStr += `<strong>Score:</strong> ${score}<br>`;
+                    if (lt === 'lapsed' && seriesCol) {
+                        reasonStr += `<strong>Series:</strong> ${inst[seriesCol] || '<em>blank</em>'}<br>`;
+                    }
+                    reasonStr += `<strong>Segment:</strong> ${seg}<br>`;
+                    reasonStr += `<hr style="margin:4px 0; border:none; border-top:1px dashed var(--border-dark);">`;
+                    reasonStr += `<em><strong>Kept Record:</strong> ${instances[0].hycsegment} (Score: ${instances[0][scoreCol] || 'N/A'})</em>`;
+                    reasonStr += `</div>`;
+
+                    removed.push({...inst, _removeReason: reasonStr});
+                    detailLog += `   -> [REMOVED] Segment: ${seg} | Series: ${ser} | Score: ${score}\n`;
+                }
+            });
+            addAudit(lt, detailLog);
+        }
+    });
+
+    if(totalCollisions === 0) addAudit(lt, `No Email collisions detected.`);
+    addAudit(lt, `--- END EMAIL DEDUPE PROCESS ---\n`);
+
+    if(removed.length === 0) { 
+        addLog(lt, 'No duplicate emails found.', 'success'); 
+        return; 
+    }
+
+    openGenericModal(lt, 'Email Deduplication', 
+        [{ id: 'tab_em_dupe', label: 'Email Duplicates', rows: removed, stepType: 'email' }], 
+        cleanData,
+        (rescuedAll) => {
+            const finalData = [...cleanData, ...rescuedAll].map(r => {
+                const c = {...r}; delete c._removeReason; return c;
+            });
+            refreshResults(lt, finalData);
+        }
+    );
+}
+
+// ─── UNIFIED MODAL LOGIC ──────────────────────────────────────
+function openGenericModal(lt, title, tabsConfig, cleanData, onConfirmFn) {
+    pendingClean = { lt, tabsConfig, cleanData, onConfirm: onConfirmFn };
+    
+    document.getElementById('modalTitle').textContent = `${title} — ${lt === 'std' ? 'Standard' : 'Lapsed'} HYC`;
+    
+    const tabBar = document.getElementById('modalTabs');
+    const body   = document.getElementById('modalBody');
+    tabBar.innerHTML = '';
+    body.innerHTML   = '';
+
+    tabsConfig.forEach((tab, i) => {
+        const btn = document.createElement('button');
+        btn.className = `modal-tab${i===0?' active':''}${tab.rows.length?' has-items':''}`;
+        btn.dataset.tabId = tab.id;
+        btn.innerHTML = `${tab.label} <span class="tab-count">${tab.rows.length}</span>`;
+        btn.onclick = () => switchTab(tab.id);
+        tabBar.appendChild(btn);
+
+        const pane = document.createElement('div');
+        pane.className = `tab-pane${i===0?' active':''}`;
+        pane.id = tab.id;
+        pane.appendChild(buildTabContent(tab.rows, tab.id, tab.stepType));
+        body.appendChild(pane);
+    });
+
+    updateModalFooter();
+    document.getElementById('previewModal').classList.add('active');
+}
+
+function buildTabContent(rows, tabId, stepType) {
+    if (!rows.length) {
+        const el = document.createElement('div');
+        el.className = 'empty-pane';
+        el.textContent = '✓  No records flagged in this category.';
+        return el;
+    }
+    const wrap = document.createElement('div');
+    const ctrl = document.createElement('div');
+    ctrl.className = 'select-controls';
+    
+    if (stepType === 'con') {
+        ctrl.innerHTML = `<span>Flagged multi-con layouts — leave row checked to clean, or **uncheck to keep raw string details**:</span>
+            <span class="select-link" onclick="setAllChecked('${tabId}',true)">Check all (Truncate)</span>
+            <span class="select-link" onclick="setAllChecked('${tabId}',false)">Uncheck all (Revert/Keep Original)</span>`;
+    } else {
+        ctrl.innerHTML = `<span>Flagged duplicate/bad values — uncheck any row to rescue it:</span>
+            <span class="select-link" onclick="setAllChecked('${tabId}',true)">Check all</span>
+            <span class="select-link" onclick="setAllChecked('${tabId}',false)">Uncheck all</span>`;
+    }
+    wrap.appendChild(ctrl);
+
+    const tw = document.createElement('div');
+    tw.className = 'preview-table-wrap';
+    const baseRowObj = rows[0].rowRef || rows[0];
+    const sampleCols = Object.keys(baseRowObj).filter(k => !k.startsWith('_')).slice(0, 8);
+
+    let html = `<table class="preview-table"><thead><tr>
+        <th>${stepType==='con'?'Clean?':'Remove?'}</th>
+        <th>Modification Details</th>
+        ${sampleCols.map(c => `<th>${c}</th>`).join('')}
+    </tr></thead><tbody>`;
+
+    rows.forEach((row, idx) => {
+        const rowId = `${tabId}_row_${idx}`;
+        const activeRowData = row.rowRef || row;
+        html += `<tr id="tr_${rowId}">
+            <td class="keep-cell">
+                <input type="checkbox" class="keep-checkbox" id="${rowId}" checked
+                    onchange="toggleRow('${rowId}',this.checked)">
+            </td>
+            <td class="reason-cell">${row._removeReason||''}</td>
+            ${sampleCols.map(c=>`<td title="${String(activeRowData[c]||'').replace(/"/g, '&quot;')}">${trunc(String(activeRowData[c]||''),24)}</td>`).join('')}
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    tw.innerHTML = html;
+    wrap.appendChild(tw);
+    return wrap;
+}
+
+function trunc(s, n) { return s.length > n ? s.slice(0,n)+'…' : s; }
+
+function switchTab(id) {
+    document.querySelectorAll('.modal-tab').forEach(b => b.classList.toggle('active', b.dataset.tabId===id));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id===id));
+}
+
+function toggleRow(rowId, checked) {
+    document.getElementById(`tr_${rowId}`).classList.toggle('row-rescue', !checked);
+    updateModalFooter();
+}
+
+function setAllChecked(tabId, checked) {
+    document.querySelectorAll(`#${tabId} .keep-checkbox`).forEach(cb => {
+        cb.checked = checked;
+        document.getElementById(`tr_${cb.id}`).classList.toggle('row-rescue', !checked);
+    });
+    updateModalFooter();
+}
+
+function updateModalFooter() {
+    const all  = document.querySelectorAll('#modalBody .keep-checkbox').length;
+    const rem  = document.querySelectorAll('#modalBody .keep-checkbox:checked').length;
+    document.getElementById('modalFooterInfo').textContent =
+        `${all} total flagged instances checked — changes will apply to (${rem}), original layout format retained for (${all-rem}).`;
+}
+
+// ─── COMMIT AND MERGE ─────────────────────────────────────────
+function cancelPreview() {
+    document.getElementById('previewModal').classList.remove('active');
+    if (pendingClean) addLog(pendingClean.lt, 'Processing implementation canceled.', 'warn');
+    pendingClean = null;
+}
+
+function confirmCleaning() {
+    if (!pendingClean) return;
+    
+    // Divert processing routing explicitly if modal is resolving file ingestion text conversions
+    if (pendingClean.tabsConfig[0].stepType === 'con') {
+        pendingClean.onConfirm([]);
+        document.getElementById('previewModal').classList.remove('active');
+        pendingClean = null;
+        return;
+    }
+
+    const rescuedAll = [];
+    const removedByStep = {};
+    
+    pendingClean.tabsConfig.forEach(tab => {
+        const { rescued, removed } = getRescuedAndRemoved(tab.id, tab.rows);
+        rescuedAll.push(...rescued);
+        if (!removedByStep[tab.stepType]) removedByStep[tab.stepType] = [];
+        removedByStep[tab.stepType].push(...removed);
+    });
+
+    let totalRemoved = 0;
+    for (const [stepType, rmArr] of Object.entries(removedByStep)) {
+        const cleanRemoved = rmArr.map(r => {
+            const c = {...r}; delete c._removeReason; return c;
+        });
+        state[pendingClean.lt].removed[stepType].push(...cleanRemoved);
+        totalRemoved += cleanRemoved.length;
+    }
+
+    addLog(pendingClean.lt, `Confirmed: ${totalRemoved} records removed (${rescuedAll.length} rescued).`, 'info');
+
+    if (rescuedAll.length > 0) {
+        addAudit(pendingClean.lt, `\n--- RESCUED RECORDS ---`);
+        const emailColRaw = document.getElementById(`${pendingClean.lt}_emailCol`).value.trim();
+        const idColRaw = document.getElementById(`${pendingClean.lt}_dedupeCol`).value.trim();
+        
+        rescuedAll.forEach(r => {
+            const ident = r[emailColRaw] || r[idColRaw] || 'Unknown Record';
+            addAudit(pendingClean.lt, `[RESCUED] User retained record -> Identifier: ${ident}`);
+        });
+        addAudit(pendingClean.lt, `-------------------\n`);
+    }
+
+    pendingClean.onConfirm(rescuedAll);
+
+    document.getElementById('previewModal').classList.remove('active');
+    pendingClean = null;
+}
+
+function getRescuedAndRemoved(tabId, originalRows) {
+    const rescued = [];
+    const removed = [];
+    document.querySelectorAll(`#${tabId} .keep-checkbox`).forEach((cb, idx) => {
+        if (originalRows[idx]) {
+            if (!cb.checked) rescued.push(originalRows[idx]);
+            else removed.push(originalRows[idx]);
+        }
+    });
+    return { rescued, removed };
+}
+
+// ─── SEGMENTATION & RESULTS REFRESH ───────────────────────────
+function runSegmentation(lt, data, siteCol, scoreCol, percent) {
+    const isLapsed = lt === 'lapsed';
+    const midLabel = isLapsed ? 'lapsedmidlevel' : 'hycmidlevel';
+    const stdLabel = isLapsed ? 'lapsedstandard' : 'hycstandard';
+
+    const headers = Object.keys(data[0] || {});
+    const seriesCol = resolveColumn('series', headers);
+
+    const groups = {};
+    data.forEach(row => {
+        const site = String(row[siteCol]||'Uncategorized').trim();
+        if (!groups[site]) groups[site] = [];
+        groups[site].push(row);
+    });
+    addLog(lt, `${Object.keys(groups).length} site groups found.`, 'success');
+
+    addAudit(lt, `\n--- STARTING SEGMENTATION PROCESS ---`);
+    addAudit(lt, `Target Percentile: Top ${percent}%`);
+
+    const combined = [];
+    const bySite   = {};
+
+    Object.keys(groups).forEach(site => {
+        const sr = groups[site];
+        sr.sort((a,b) => (parseFloat(b[scoreCol])||0) - (parseFloat(a[scoreCol])||0));
+        const split = Math.ceil(sr.length * (percent/100));
+        
+        let overrides = 0;
+        sr.forEach((row,i) => {
+            let segment = i < split ? midLabel : stdLabel;
+
+            if (isLapsed && seriesCol && row[seriesCol]) {
+                const sVal = String(row[seriesCol]).toLowerCase().trim();
+                if (sVal === 'standard') { segment = 'lapsedstandard'; overrides++; }
+                else if (sVal === 'midlevel') { segment = 'lapsedmidlevel'; overrides++; }
+            }
+
+            const tagged = { ...row, hycsegment: segment };
+            combined.push(tagged);
+            
+            if (segment === midLabel) { 
+                if (!bySite[site]) bySite[site]=[]; 
+                bySite[site].push(tagged); 
+            }
+        });
+        
+        const overrideText = isLapsed && overrides > 0 ? ` (Includes ${overrides} Series column manual overrides)` : ``;
+        addAudit(lt, `Site: [${site}] | Total: ${sr.length} | Calc Cutoff Index: ${split} | Mid-Level Built: ${bySite[site]?.length||0}${overrideText}`);
+    });
+
+    addAudit(lt, `--- END SEGMENTATION PROCESS ---\n`);
+
+    addLog(lt, `Segmentation complete. ${combined.length} records tagged.`, 'success');
+    displayResults(lt, combined, bySite, state[lt].originalInputCount);
+}
+
+function refreshResults(lt, data) {
+    const headers = Object.keys(data[0]||{});
+    const siteColRaw = document.getElementById(`${lt}_siteCol`).value.trim();
+    const siteCol = resolveSiteColumn(headers, siteColRaw) || siteColRaw;
+
+    const isLapsed = lt === 'lapsed';
+    const midLabel = isLapsed ? 'lapsedmidlevel' : 'hycmidlevel';
+    
+    const bySite = {};
+    data.forEach(row => {
+        const site = String(row[siteCol]||'Uncategorized').trim();
+        if (row.hycsegment === midLabel) {
+            if (!bySite[site]) bySite[site] = [];
+            bySite[site].push(row);
+        }
+    });
+
+    displayResults(lt, data, bySite, state[lt].originalInputCount);
+    addLog(lt, `List updated. Total records: ${data.length}`, 'success');
+}
+
+// ─── RESULTS DISPLAY ─────────────────────────────────────────
+function displayResults(lt, combined, bySite, inputCount) {
+    const isLapsed = lt === 'lapsed';
+    const midLabel = isLapsed ? 'lapsedmidlevel' : 'hycmidlevel';
+    const stdLabel = isLapsed ? 'lapsedstandard' : 'hycstandard';
+    const numCls   = isLapsed ? 'amber' : 'blue';
+    const midRows  = combined.filter(r => r.hycsegment === midLabel);
+    const stdRows  = combined.filter(r => r.hycsegment === stdLabel);
+    const removed  = inputCount - combined.length;
+
+    let removedDownloadsHtml = '';
+    const rm = state[lt].removed;
+    if (rm.id.length || rm.fake.length || rm.email.length || (isLapsed && state.lapsed.originalMultiIdRows.length)) {
+        removedDownloadsHtml += `<div class="section-divider">Removed Records &amp; Backup Logs (CSV)</div>`;
+        removedDownloadsHtml += `<div class="download-grid">`;
+        if (rm.id.length) {
+            removedDownloadsHtml += createRemovedDlCard(lt, 'Removed Row Duplicates', rm.id.length, 'id');
+        }
+        if (rm.fake.length) {
+            removedDownloadsHtml += createRemovedDlCard(lt, 'Removed Fake Emails', rm.fake.length, 'fake');
+        }
+        if (rm.email.length) {
+            removedDownloadsHtml += createRemovedDlCard(lt, 'Removed Email Duplicates', rm.email.length, 'email');
+        }
+        if (isLapsed && state.lapsed.originalMultiIdRows.length) {
+            removedDownloadsHtml += `
+                <div class="dl-card">
+                    <div class="dl-name" style="color:var(--accent-lapsed)">Original Multi-ID Rows (Pre-Cleaned)</div>
+                    <div class="dl-count">${state.lapsed.originalMultiIdRows.length} backup rows</div>
+                    <div class="dl-row">
+                        <button class="dl-btn" style="width:100%; background:var(--accent-lapsed);" onclick="triggerBackupDownload()">↓ Save Original Backup CSV</button>
+                    </div>
+                </div>`;
+        }
+        removedDownloadsHtml += `</div>`;
+    }
+
+    const container = document.getElementById(`${lt}_results`);
+    container.style.display = 'block';
+    container.innerHTML = `
+        <div class="results-title">${isLapsed ? 'Lapsed' : 'Standard'} HYC — Results</div>
+        <div class="stats-strip">
+            <div class="stat-cell"><span class="stat-num">${inputCount}</span><span class="stat-lbl">Input Rows</span></div>
+            <div class="stat-cell"><span class="stat-num red">${removed}</span><span class="stat-lbl">Removed</span></div>
+            <div class="stat-cell"><span class="stat-num ${numCls}">${combined.length}</span><span class="stat-lbl">Final Records</span></div>
+            <div class="stat-cell"><span class="stat-num green">${midRows.length}</span><span class="stat-lbl">${midLabel}</span></div>
+            <div class="stat-cell"><span class="stat-num">${stdRows.length}</span><span class="stat-lbl">${stdLabel}</span></div>
+            <div class="stat-cell"><span class="stat-num">${Object.keys(bySite).length}</span><span class="stat-lbl">Sites</span></div>
+        </div>
+        <div class="actions-strip">
+            <button class="process-btn" onclick="postProcessEmailDedupe('${lt}')">Optional: Dedupe by Email</button>
+        </div>
+        <div class="downloads-label">Downloads</div>
+        <div class="download-grid" id="${lt}_dlGrid"></div>
+        ${removedDownloadsHtml}
+    `;
+
+    const grid = document.getElementById(`${lt}_dlGrid`);
+    const masterKey = `${lt}_combined`;
+    dlStore[masterKey] = combined;
+    addDlCard(grid, `${isLapsed?'Lapsed':'Standard'} HYC — Full Segmented List`, combined.length, masterKey, true, lt);
+
+    const div = document.createElement('div');
+    div.style.gridColumn = '1/-1';
+    div.className = 'section-divider';
+    div.textContent = 'Individual Site Mid-Level Files (spot-check)';
+    grid.appendChild(div);
+
+    Object.keys(bySite).sort().forEach(site => {
+        const key = `${lt}_site_${site.replace(/[^a-z0-9]/gi,'_')}`;
+        dlStore[key] = bySite[site];
+        addDlCard(grid, site, bySite[site].length, key, false, lt);
+    });
+}
+
+function addDlCard(container, name, count, key, featured, lt) {
+    const card = document.createElement('div');
+    card.className = `dl-card${featured?' featured':''}`;
+    const fmtId = `fmt_${key}`;
+    card.innerHTML = `
+        <div class="dl-name">${name}</div>
+        <div class="dl-count">${count} records</div>
+        <div class="dl-row">
+            <select class="dl-select" id="${fmtId}">
+                <option value="csv">CSV (.csv)</option>
+                <option value="xlsx">Excel (.xlsx)</option>
+            </select>
+            <button class="dl-btn" onclick="triggerDownload('${key}','${name.replace(/'/g,"\\'")}','${fmtId}')">↓ Save</button>
+        </div>`;
+    container.appendChild(card);
+}
+
+function createRemovedDlCard(lt, name, count, stepType) {
+    return `
+        <div class="dl-card">
+            <div class="dl-name" style="color:var(--red)">${name}</div>
+            <div class="dl-count">${count} removed records</div>
+            <div class="dl-row">
+                <button class="dl-btn" style="width:100%" onclick="triggerRemovedDownload('${lt}', '${stepType}', '${name.replace(/'/g,"\\'").replace(/\s/g,'_')}')">↓ Save CSV</button>
+            </div>
+        </div>`;
+}
+
+// ─── DOWNLOAD HANDLERS ────────────────────────────────────────
+function triggerRemovedDownload(lt, stepType, name) {
+    const data = state[lt].removed[stepType];
+    const suggested = `${name.toLowerCase()}.csv`;
+    addAudit(lt, `User downloaded removed records log: [${suggested}] (${data.length} records)`);
+
+    const blob = new Blob([Papa.unparse(data)], {type:'text/csv'});
+    const a = Object.assign(document.createElement('a'), {href:URL.createObjectURL(blob), download:suggested});
+    a.click(); URL.revokeObjectURL(a.href);
+    addLog(lt, `Downloaded: ${suggested}`, 'info');
+}
+
+function triggerBackupDownload() {
+    const data = state.lapsed.originalMultiIdRows;
+    const suggested = `lapsed_multi_id_original_backup.csv`;
+    addAudit('lapsed', `User downloaded original formatting backup file: [${suggested}] (${data.length} records)`);
+
+    const blob = new Blob([Papa.unparse(data)], {type:'text/csv'});
+    const a = Object.assign(document.createElement('a'), {href:URL.createObjectURL(blob), download:suggested});
+    a.click(); URL.revokeObjectURL(a.href);
+    addLog('lapsed', `Saved pre-cleaned layout dataset backup: ${suggested}`, 'info');
+}
+
+async function triggerDownload(key, name, fmtId) {
+    const data      = dlStore[key];
+    const format    = document.getElementById(fmtId).value;
+    const suggested = `${name.toLowerCase().replace(/[^a-z0-9]+/g,'_')}.${format}`;
+    const lt        = key.startsWith('lapsed') ? 'lapsed' : 'std';
+
+    addAudit(lt, `User triggered list download: [${suggested}] (${data.length} records)`);
+
+    try {
+        if (window.showSaveFilePicker) {
+            const handle = await window.showSaveFilePicker({
+                suggestedName: suggested,
+                types:[{ description: format==='csv'?'CSV File':'Excel File',
+                    accept: format==='csv'
+                        ? {'text/csv':['.csv']}
+                        : {'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']} }]
+            });
+            const w = await handle.createWritable();
+            if (format==='csv') {
+                await w.write(Papa.unparse(data));
+            } else {
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Data');
+                await w.write(XLSX.write(wb,{bookType:'xlsx',type:'array'}));
+            }
+            await w.close();
+            addLog(lt, `Saved: ${suggested}`, 'success');
+        } else {
+            if (format==='csv') {
+                const blob = new Blob([Papa.unparse(data)],{type:'text/csv'});
+                const a = Object.assign(document.createElement('a'), {href:URL.createObjectURL(blob), download:suggested});
+                a.click(); URL.revokeObjectURL(a.href);
+            } else {
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Data');
+                XLSX.writeFile(wb, suggested);
+            }
+            addLog(lt, `Downloaded: ${suggested}`, 'info');
+        }
+    } catch(err) {
+        if (err.name !== 'AbortError') addLog(lt, `Save error: ${err.message}`, 'error');
+    }
+}
+
+// ─── INIT ─────────────────────────────────────────────────────
+setupFileInput('std');
+setupFileInput('lapsed');
+document.getElementById('std_processBtn').addEventListener('click',    () => triggerProcess('std'));
+document.getElementById('lapsed_processBtn').addEventListener('click', () => triggerProcess('lapsed'));
+</script>
+</body>
+</html>

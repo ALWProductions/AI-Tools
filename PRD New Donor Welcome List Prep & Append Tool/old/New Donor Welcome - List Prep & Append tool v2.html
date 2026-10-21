@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>South New Donor Welcome - Prep &amp; Append v2</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; color: #2c3e50; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 40px; }
+        h1 { color: #2c3e50; margin-bottom: 25px; font-size: 24px; border-left: 5px solid #3498db; padding-left: 15px; }
+        .step { margin-bottom: 30px; padding: 25px; border: 1px solid #e1e8ed; border-radius: 8px; position: relative; }
+        .step h2 { font-size: 18px; margin-bottom: 15px; color: #34495e; }
+        .badge { background: #3498db; color: white; border-radius: 50%; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; margin-right: 12px; font-size: 14px; font-weight: bold; }
+        label { display: block; margin-bottom: 10px; font-weight: 600; font-size: 14px; }
+        input[type="file"] { width: 100%; padding: 12px; background: #fff; border: 2px dashed #bdc3c7; border-radius: 6px; cursor: pointer; transition: border 0.3s; }
+        input[type="file"]:hover { border-color: #3498db; }
+        .status { margin-top: 15px; padding: 12px; border-radius: 6px; font-size: 14px; display: none; }
+        .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; display: block; }
+        .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; display: block; }
+        .btn { padding: 14px 28px; border: none; border-radius: 6px; background: #2c3e50; color: white; font-weight: 600; cursor: pointer; font-size: 15px; transition: opacity 0.2s; }
+        .btn:hover { opacity: 0.9; }
+        .btn:disabled { background: #bdc3c7; cursor: not-allowed; }
+        .preview-box { margin-top: 20px; max-height: 250px; overflow: auto; border: 1px solid #eee; background: #fafafa; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; white-space: nowrap; }
+        th { background: #f2f2f2; color: #7f8c8d; position: sticky; top: 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>South New Donor Welcome: Emma Prep Tool</h1>
+
+    <div class="step">
+        <h2><span class="badge">1</span>Upload Client List (Prep)</h2>
+        <input type="file" id="mainFile" accept=".csv,.xlsx,.xls">
+        <div id="mainStatus" class="status"></div>
+    </div>
+
+    <div class="step">
+        <h2><span class="badge">2</span>Upload Data Append File</h2>
+        <input type="file" id="appendFile" accept=".csv,.xlsx,.xls">
+        <div id="appendStatus" class="status"></div>
+    </div>
+
+    <div class="step" style="text-align: center;">
+        <button class="btn" id="processBtn" onclick="executeWorkflow()" disabled>Execute Prep & Append</button>
+        <div id="finalStatus" class="status"></div>
+    </div>
+
+    <div id="downloadSection" class="step" style="display: none; background: #f0f9ff; border-color: #3498db;">
+        <h2><span class="badge">3</span>Download Results</h2>
+        <button class="btn" onclick="downloadResult()" style="background: #27ae60;">Download Final CSV for Emma</button>
+        <div class="preview-box" id="resultPreview"></div>
+    </div>
+</div>
+
+<script>
+    let preppedData = [];
+    let referenceData = [];
+    let referenceKey = '';
+
+    // File Parser Helper
+    function parseFile(file, callback) {
+        const isCSV = file.name.toLowerCase().endsWith('.csv');
+        if (isCSV) {
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => callback(results.data)
+            });
+        } else {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.SheetNames[0];
+                const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet]);
+                callback(jsonData);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    }
+
+    // Step 1: Prep the Main List
+    document.getElementById('mainFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        parseFile(file, (data) => {
+            if (data.length === 0) {
+                showStatus('mainStatus', 'File is empty.', 'error');
+                return;
+            }
+
+            // Define the mapping
+            const map = {
+                'Cns_LOOKUPID': 'BBCRM lookupID',
+                'Cns_FIRSTNAME': 'first_name',
+                'Cns_KEYNAME': 'last_name',
+                'CnsEmailAdrs_EMAILADDRESS': 'Email'
+            };
+
+            preppedData = data.map(row => {
+                let newRow = {};
+                
+                // 1. Create siteacronym first (trimmed and prefixed)
+                const rawAffinity = row['CnsSoDIVPriAffinityAttribute_VALUE'] ? String(row['CnsSoDIVPriAffinityAttribute_VALUE']).trim() : '';
+                newRow['siteacronym'] = rawAffinity ? `CA-${rawAffinity}` : '';
+
+                // 2. Add the renamed fields while keeping original data
+                Object.keys(map).forEach(oldKey => {
+                    newRow[map[oldKey]] = row[oldKey] !== undefined ? row[oldKey] : '';
+                });
+
+                // 3. Temporarily keep Affinity for the VLOOKUP step
+                newRow['CnsSoDIVPriAffinityAttribute_VALUE'] = rawAffinity;
+
+                return newRow;
+            });
+
+            showStatus('mainStatus', `Prepped ${preppedData.length} rows successfully.`, 'success');
+            checkReady();
+        });
+    });
+
+    // Step 2: Load Reference File
+    document.getElementById('appendFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        parseFile(file, (data) => {
+            if (data.length === 0) {
+                showStatus('appendStatus', 'Reference file is empty.', 'error');
+                return;
+            }
+
+            const headers = Object.keys(data[0]);
+            referenceKey = headers.find(h => h.toLowerCase() === 'siteacronym' || h.toLowerCase() === 'acronym');
+
+            if (!referenceKey) {
+                showStatus('appendStatus', 'Error: No "siteacronym" column found in reference file.', 'error');
+                return;
+            }
+
+            referenceData = data;
+            showStatus('appendStatus', `Loaded ${data.length} reference rows matching on "${referenceKey}".`, 'success');
+            checkReady();
+        });
+    });
+
+    function checkReady() {
+        if (preppedData.length > 0 && referenceData.length > 0) {
+            document.getElementById('processBtn').disabled = false;
+        }
+    }
+
+    // Step 3: Execute Merge and Final Cleanup
+    function executeWorkflow() {
+        // Map reference data for fast lookup
+        const refMap = {};
+        referenceData.forEach(row => {
+            const key = String(row[referenceKey]).trim();
+            if (key) refMap[key] = row;
+        });
+
+        const finalOutput = preppedData.map(row => {
+            const match = refMap[row.siteacronym] || {};
+            
+            // Merge matching data
+            let merged = { ...row, ...match };
+
+            // DELETE original CnsSoDIVPriAffinityAttribute_VALUE column as requested
+            delete merged['CnsSoDIVPriAffinityAttribute_VALUE'];
+            // Remove the reference key if it named differently (like "acronym") to avoid duplicates
+            if (referenceKey !== 'siteacronym') delete merged[referenceKey];
+
+            return merged;
+        });
+
+        window.finalData = finalOutput;
+        renderPreview(finalOutput);
+        document.getElementById('downloadSection').style.display = 'block';
+        showStatus('finalStatus', 'Process complete. Check preview below.', 'success');
+    }
+
+    function renderPreview(data) {
+        const headers = Object.keys(data[0]);
+        let html = '<table><thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+        data.slice(0, 10).forEach(row => {
+            html += '<tr>' + headers.map(h => `<td>${row[h] || ''}</td>`).join('') + '</tr>';
+        });
+        html += '</tbody></table>';
+        document.getElementById('resultPreview').innerHTML = html;
+    }
+
+    function downloadResult() {
+        const csv = Papa.unparse(window.finalData);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", "Prepped_Donor_Welcome_List.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function showStatus(id, msg, type) {
+        const el = document.getElementById(id);
+        el.textContent = msg;
+        el.className = 'status ' + type;
+    }
+</script>
+
+</body>
+</html>

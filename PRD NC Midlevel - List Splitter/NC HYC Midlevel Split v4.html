@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HYC List Splitter Tool v4 - North/Central</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        :root {
+            --bg:           #f2f2f0;
+            --surface:      #ffffff;
+            --surface2:     #f7f7f5;
+            --border:       #ddddd8;
+            --border-dark:  #bbbbb5;
+            --text:         #1a1a1a;
+            --text-dim:     #666660;
+            --text-dimmer:  --99998f;
+            --accent-std:   #0284c7;
+            --green:        #16a34a;
+            --red:          #dc2626;
+            --mono: 'IBM Plex Mono', monospace;
+            --sans: 'IBM Plex Sans', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* ─── HEADER ─── */
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 20px 36px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .header h1 {
+            font-family: var(--mono);
+            font-size: 1.05em;
+            font-weight: 600;
+            color: var(--text);
+            margin: 0;
+        }
+        .header-sub {
+            font-family: var(--mono);
+            font-size: 0.72em;
+            color: var(--text-dimmer);
+        }
+        .version-tag {
+            margin-left: auto;
+            font-family: var(--mono);
+            font-size: 0.68em;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            padding: 2px 8px;
+            color: var(--text-dimmer);
+        }
+
+        /* ─── WORKSPACE ─── */
+        .workspace {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .panel {
+            background: var(--surface);
+            padding: 28px 32px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .panel-dot {
+            width: 9px; height: 9px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: var(--accent-std);
+        }
+
+        .panel-title {
+            font-family: var(--mono);
+            font-size: 0.78em;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--accent-std);
+        }
+
+        .panel-badge {
+            margin-left: auto;
+            font-family: var(--mono);
+            font-size: 0.62em;
+            padding: 2px 7px;
+            border: 1px solid var(--border-dark);
+            color: var(--text-dimmer);
+            border-radius: 2px;
+        }
+
+        /* ─── CONFIG ─── */
+        .config-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .config-item label {
+            display: block;
+            font-family: var(--mono);
+            font-size: 0.62em;
+            color: var(--text-dimmer);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 3px;
+        }
+        .config-item input {
+            width: 100%;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 7px 9px;
+            font-family: var(--mono);
+            font-size: 0.78em;
+            outline: none;
+            transition: border-color 0.15s;
+            border-radius: 2px;
+        }
+        .config-item input:focus { border-color: var(--border-dark); }
+
+        /* ─── UPLOAD ─── */
+        .upload-area {
+            border: 1px dashed var(--border-dark);
+            padding: 36px 16px;
+            text-align: center;
+            background: var(--surface2);
+            transition: all 0.15s;
+            margin: 14px 0;
+            border-radius: 2px;
+        }
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--text-dim);
+            background: #efefec;
+        }
+        .upload-area.loaded { border-style: solid; border-color: var(--accent-std); }
+
+        .upload-area input[type="file"] { display: none; }
+        .upload-text {
+            font-family: var(--mono);
+            font-size: 0.72em;
+            color: var(--text-dimmer);
+            margin-bottom: 8px;
+        }
+        .upload-btn {
+            display: inline-block;
+            padding: 6px 16px;
+            font-family: var(--mono);
+            font-size: 0.7em;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--border-dark);
+            color: var(--text);
+            background: var(--surface);
+            border-radius: 2px;
+            transition: all 0.15s;
+        }
+        .upload-btn:hover { background: var(--bg); }
+        .upload-filename {
+            font-family: var(--mono);
+            font-size: 0.72em;
+            margin-top: 7px;
+            font-weight: 600;
+            color: var(--accent-std);
+        }
+
+        /* ─── PROCESS BTN ─── */
+        .process-btn {
+            width: 100%;
+            padding: 11px;
+            font-family: var(--mono);
+            font-size: 0.76em;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s;
+            border-radius: 2px;
+            margin-bottom: 12px;
+        }
+        .process-btn:disabled {
+            background: var(--surface2);
+            border-color: var(--border);
+            color: var(--text-dimmer);
+            cursor: not-allowed;
+        }
+        .process-btn:not(:disabled) {
+            background: var(--accent-std);
+            border-color: var(--accent-std);
+            color: #fff;
+        }
+        .process-btn:not(:disabled):hover { opacity: 0.88; }
+
+        /* ─── LOG ─── */
+        .log-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            padding: 0 2px;
+        }
+        .log-toolbar span {
+            font-family: var(--mono);
+            font-size: 0.65em;
+            color: var(--text-dimmer);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .log-dl-btn {
+            font-family: var(--mono);
+            font-size: 0.65em;
+            color: var(--text-dim);
+            background: none;
+            border: none;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .log-dl-btn:hover { color: var(--text); }
+
+        .log-container {
+            background: #1c1c1c;
+            border: 1px solid #333;
+            padding: 10px 12px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-family: var(--mono);
+            font-size: 0.68em;
+            border-radius: 2px;
+        }
+        .log-entry { padding: 1px 0; }
+        .log-entry.info    { color: #60a5fa; }
+        .log-entry.success { color: #4ade80; }
+        .log-entry.error   { color: #f87171; }
+        .log-entry.warn    { color: #fbbf24; }
+        .log-entry.dim     { color: #555; }
+
+        /* ─── RESULTS ─── */
+        .results-outer {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 28px 32px;
+            margin-top: 20px;
+            display: none;
+        }
+        .results-title {
+            font-family: var(--mono);
+            font-size: 0.72em;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-dimmer);
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .stats-strip {
+            display: flex;
+            border: 1px solid var(--border);
+            margin-bottom: 22px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .stat-cell {
+            flex: 1;
+            padding: 12px 14px;
+            border-right: 1px solid var(--border);
+            text-align: center;
+            background: var(--surface2);
+        }
+        .stat-cell:last-child { border-right: none; }
+        .stat-num {
+            font-family: var(--mono);
+            font-size: 1.4em;
+            font-weight: 600;
+            display: block;
+            line-height: 1;
+            margin-bottom: 3px;
+            color: var(--text);
+        }
+        .stat-num.blue  { color: var(--accent-std); }
+        .stat-num.green { color: var(--green); }
+        .stat-num.red   { color: var(--red); }
+        .stat-lbl {
+            font-family: var(--mono);
+            font-size: 0.58em;
+            color: var(--text-dimmer);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .downloads-label {
+            font-family: var(--mono);
+            font-size: 0.65em;
+            color: var(--text-dimmer);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 10px;
+        }
+        .download-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+        .dl-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            padding: 12px 14px;
+            border-radius: 2px;
+        }
+        .dl-card.featured { border-color: var(--border-dark); background: var(--surface); }
+        .dl-name {
+            font-family: var(--mono);
+            font-size: 0.73em;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 2px;
+        }
+        .dl-count {
+            font-family: var(--mono);
+            font-size: 0.63em;
+            color: var(--text-dimmer);
+            margin-bottom: 9px;
+        }
+        .dl-row { display: flex; gap: 6px; }
+        .dl-select {
+            flex: 1;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 5px 7px;
+            font-family: var(--mono);
+            font-size: 0.66em;
+            outline: none;
+            border-radius: 2px;
+        }
+        .dl-btn {
+            padding: 5px 12px;
+            font-family: var(--mono);
+            font-size: 0.66em;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: opacity 0.15s;
+            white-space: nowrap;
+            background: var(--accent-std);
+            color: #fff;
+        }
+        .dl-btn:hover { opacity: 0.82; }
+
+        .section-divider {
+            font-family: var(--mono);
+            font-size: 0.63em;
+            color: var(--text-dimmer);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 10px 0 6px;
+            border-top: 1px solid var(--border);
+            margin: 2px 0 8px;
+        }
+
+        /* ─── MODAL ─── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border-dark);
+            max-width: 1080px;
+            width: 100%;
+            max-height: 88vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 3px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+        }
+        .modal-header {
+            padding: 16px 22px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+            background: var(--surface2);
+        }
+        .modal-title {
+            font-family: var(--mono);
+            font-size: 0.82em;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .modal-subtitle {
+            font-family: var(--mono);
+            font-size: 0.65em;
+            color: var(--text-dimmer);
+        }
+        .modal-close {
+            margin-left: auto;
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            padding: 4px 10px;
+            font-family: var(--mono);
+            font-size: 0.7em;
+            cursor: pointer;
+            border-radius: 2px;
+        }
+        .modal-close:hover { border-color: var(--border-dark); }
+
+        .modal-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            background: var(--surface2);
+        }
+        .modal-tab {
+            padding: 9px 18px;
+            font-family: var(--mono);
+            font-size: 0.7em;
+            cursor: pointer;
+            border: none;
+            border-right: 1px solid var(--border);
+            border-bottom: 2px solid transparent;
+            color: var(--text-dimmer);
+            background: transparent;
+            transition: all 0.12s;
+        }
+        .modal-tab:hover { color: var(--text); }
+        .modal-tab.active { color: var(--text); border-bottom-color: var(--accent-std); background: var(--surface); }
+        .modal-tab .tab-count {
+            display: inline-block;
+            margin-left: 5px;
+            background: var(--border);
+            padding: 1px 5px;
+            border-radius: 2px;
+            font-size: 0.85em;
+        }
+        .modal-tab.has-items .tab-count { background: #fee2e2; color: var(--red); }
+        .modal-tab.info-tab .tab-count { background: #e0f2fe; color: #0369a1; }
+
+        .modal-body { overflow-y: auto; flex: 1; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+
+        .preview-table-wrap { overflow-x: auto; }
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--mono);
+            font-size: 0.68em;
+        }
+        .preview-table th {
+            background: var(--surface2);
+            padding: 7px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-dimmer);
+            font-weight: 500;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .preview-table td {
+            padding: 6px 10px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-dim);
+            max-width: 190px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            vertical-align: top;
+        }
+        .preview-table tr:hover td { background: var(--surface2); }
+        .preview-table td.reason-cell { 
+            color: var(--red); 
+            white-space: normal; 
+            min-width: 320px; 
+        }
+        .preview-table td.keep-cell   { text-align: center; }
+        .keep-checkbox { width: 14px; height: 14px; cursor: pointer; accent-color: var(--green); }
+        .row-rescue td { background: #f0fdf4 !important; }
+
+        .empty-pane {
+            padding: 44px;
+            text-align: center;
+            font-family: var(--mono);
+            font-size: 0.74em;
+            color: var(--text-dimmer);
+        }
+
+        .modal-footer {
+            padding: 12px 22px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+            background: var(--surface2);
+        }
+        .modal-footer-info {
+            font-family: var(--mono);
+            font-size: 0.68em;
+            color: var(--text-dimmer);
+            flex: 1;
+        }
+        .modal-action-btn {
+            padding: 9px 20px;
+            font-family: var(--mono);
+            font-size: 0.74em;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: opacity 0.15s;
+        }
+        .modal-action-btn:hover { opacity: 0.85; }
+        .btn-confirm { background: var(--green);   color: #fff; }
+        .btn-cancel  { background: var(--surface); color: var(--text-dim); border: 1px solid var(--border-dark); }
+
+        .select-controls {
+            padding: 7px 10px;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 14px;
+            align-items: center;
+            font-family: var(--mono);
+            font-size: 0.66em;
+            color: var(--text-dimmer);
+        }
+        .select-link { color: var(--accent-std); cursor: pointer; text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>HYC List Splitter — NC Edition</h1>
+    <span class="header-sub">North/Central Standard Pipeline</span>
+    <span class="version-tag">v13.3 - NC</span>
+</div>
+
+<div class="workspace">
+    <div class="panel panel-std" id="stdPanel">
+        <div class="panel-header">
+            <div class="panel-dot"></div>
+            <div class="panel-title">Standard HYC (North/Central)</div>
+            <span class="panel-badge">hycstandard / hycmidlevel</span>
+        </div>
+        <div class="config-row">
+            <div class="config-item">
+                <label>Site Acronym Column</label>
+                <input type="text" id="std_siteCol" value="site_acronym">
+            </div>
+            <div class="config-item">
+                <label>Wealth Score Column</label>
+                <input type="text" id="std_scoreCol" value="top tier score">
+            </div>
+        </div>
+        <div class="config-row">
+            <div class="config-item">
+                <label>Email Address Column</label>
+                <input type="text" id="std_emailCol" value="email address">
+            </div>
+            <div class="config-item">
+                <label>Constituent ID Column</label>
+                <input type="text" id="std_donorIdCol" value="constituent id">
+            </div>
+        </div>
+        <div class="config-row">
+            <div class="config-item">
+                <label>Mid-Level Top % (WA-GFE Only)</label>
+                <input type="number" id="std_percent" value="10" min="1" max="100">
+            </div>
+        </div>
+        <div class="upload-area" id="std_uploadArea">
+            <input type="file" id="std_fileInput" accept=".xlsx,.xls,.csv">
+            <div class="upload-text">Drop Updated NC Excel or CSV here</div>
+            <label for="std_fileInput" class="upload-btn">Select File</label>
+            <div class="upload-filename" id="std_fileName"></div>
+        </div>
+        <button class="process-btn" id="std_processBtn" disabled>Clean &amp; Process NC Dataset</button>
+        <div class="log-toolbar">
+            <span>Activity Log</span>
+            <button class="log-dl-btn" onclick="downloadLog('std')">Save Log (.txt)</button>
+        </div>
+        <div class="log-container" id="std_log">
+            <div class="log-entry dim">[ready] Waiting for North/Central data file...</div>
+        </div>
+    </div>
+
+    <div class="results-outer std-results" id="std_results"></div>
+</div>
+
+<div class="modal-overlay" id="previewModal">
+    <div class="modal">
+        <div class="modal-header">
+            <div>
+                <div class="modal-title" id="modalTitle">Cleaning Preview</div>
+                <div class="modal-subtitle" id="modalSubtitle">Verify system splits and uncheck any row to rescue it.</div>
+            </div>
+            <button class="modal-close" onclick="cancelPreview()">✕ Cancel</button>
+        </div>
+        <div class="modal-tabs" id="modalTabs"></div>
+        <div class="modal-body"  id="modalBody"></div>
+        <div class="modal-footer">
+            <div class="modal-footer-info" id="modalFooterInfo"></div>
+            <button class="modal-action-btn btn-cancel"  onclick="cancelPreview()">Cancel</button>
+            <button class="modal-action-btn btn-confirm" onclick="confirmCleaning()">✓ Confirm &amp; Process</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────
+const state = {
+    std: { rawData: [], fileName: '', originalInputCount: 0, auditLog: [], removed: { id: [], fake: [] } }
+};
+let pendingClean = null;
+const dlStore = {};
+
+// ─── LOGGING & TXT DOWNLOAD ──────────────────────────────────
+function addAudit(lt, text) {
+    const t = new Date().toLocaleTimeString('en-US', {hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    state[lt].auditLog.push(`[${t}] ${text}`);
+}
+
+function addLog(lt, msg, type = 'info') {
+    const el = document.getElementById(`${lt}_log`);
+    const d  = document.createElement('div');
+    d.className = `log-entry ${type}`;
+    const t = new Date().toLocaleTimeString('en-US', {hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    d.textContent = `[${t}] ${msg}`;
+    el.appendChild(d);
+    el.scrollTop = el.scrollHeight;
+    state[lt].auditLog.push(`[${t}] [${type.toUpperCase()}] ${msg}`);
+}
+
+function downloadLog(lt) {
+    const header = `==========================================================\n` +
+                   ` HYC LIST SPLITTER — NC PIPELINE AUDIT LOG\n` +
+                   ` File:     ${state[lt].fileName || 'Unknown'}\n` +
+                   ` Date:     ${new Date().toLocaleString()}\n` +
+                   `==========================================================\n\n`;
+
+    const textContent = header + state[lt].auditLog.join('\n');
+    const blob = new Blob([textContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `NC_Audit_Log_${new Date().toISOString().slice(0,10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    addLog(lt, 'Audit log downloaded successfully.', 'success');
+}
+
+// ─── COLUMN RESOLVERS ─────────────────────────────────────────
+function resolveColumn(userInput, headers) {
+    if (!userInput) return null;
+    const norm = s => s.toLowerCase().replace(/[\s_\-\/\(\)]/g, '');
+    const target = norm(userInput);
+    return headers.find(h => norm(h) === target) || null;
+}
+
+function resolveSiteColumn(headers, userInput) {
+    let match = resolveColumn(userInput, headers);
+    if (match) return match;
+    const fallbacks = ['siteacronym', 'site_acronym', 'site acronym', 'site', 'acronym', 'location'];
+    for (let f of fallbacks) { match = resolveColumn(f, headers); if (match) return match; }
+    return null;
+}
+
+function resolveEmailColumn(headers, userInput) {
+    let match = resolveColumn(userInput, headers);
+    if (match) return match;
+    const fallbacks = ['emailaddress', 'email address', 'email', 'primaryemail'];
+    for (let f of fallbacks) { match = resolveColumn(f, headers); if (match) return match; }
+    return null;
+}
+
+function resolveScoreColumn(headers, userInput) {
+    let match = resolveColumn(userInput, headers);
+    if (match) return match;
+    const fallbacks = ['highwindfallscore', 'toptierscore', 'top-tier-score', 'modelscore', 'score'];
+    for (let f of fallbacks) { match = resolveColumn(f, headers); if (match) return match; }
+    return null;
+}
+
+function resolveDonorIdColumn(headers, userInput) {
+    let match = resolveColumn(userInput, headers);
+    if (match) return match;
+    const fallbacks = ['constituentid', 'constituent id', 'donorid', 'donor id', 'id'];
+    for (let f of fallbacks) { match = resolveColumn(f, headers); if (match) return match; }
+    return null;
+}
+
+// ─── FILE LOADING ─────────────────────────────────────────────
+function setupFileInput(lt) {
+    const input = document.getElementById(`${lt}_fileInput`);
+    const area  = document.getElementById(`${lt}_uploadArea`);
+    input.addEventListener('change', e => loadFile(e.target.files[0], lt));
+    area.addEventListener('dragover',  e => { e.preventDefault(); area.classList.add('dragover'); });
+    area.addEventListener('dragleave', () => area.classList.remove('dragover'));
+    area.addEventListener('drop', e => {
+        e.preventDefault(); area.classList.remove('dragover');
+        if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0], lt);
+    });
+}
+
+function loadFile(file, lt) {
+    if (!file) return;
+    document.getElementById(`${lt}_fileName`).textContent = `✓  ${file.name}`;
+    state[lt].fileName = file.name;
+    state[lt].auditLog = []; 
+    state[lt].removed = { id: [], fake: [] };
+    
+    document.getElementById(`${lt}_uploadArea`).classList.add('loaded');
+    addLog(lt, `File selected: ${file.name}`, 'success');
+
+    const reader = new FileReader();
+    reader.onload = evt => {
+        try {
+            let parsedData = [];
+            if (file.name.toLowerCase().endsWith('.csv')) {
+                const text = new TextDecoder().decode(new Uint8Array(evt.target.result));
+                const parsed = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: false });
+                parsedData = parsed.data;
+            } else {
+                const dataBinary = new Uint8Array(evt.target.result);
+                const wb = XLSX.read(dataBinary, { type: 'array' });
+                parsedData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+            }
+            
+            if (!parsedData || parsedData.length === 0) {
+                throw new Error("No usable rows discovered inside spreadsheet structure.");
+            }
+
+            const cols = Object.keys(parsedData[0] || {});
+            addAudit(lt, `\n--- FILE LOADED ---`);
+            addAudit(lt, `Filename: ${file.name}`);
+            addAudit(lt, `Total Records: ${parsedData.length}`);
+            addAudit(lt, `Detected Columns: ${cols.join(', ')}\n`);
+            
+            addLog(lt, `Loaded ${parsedData.length} records.`, 'success');
+            state.std.rawData = parsedData;
+            document.getElementById(`${lt}_processBtn`).disabled = false;
+        } catch(err) {
+            addLog(lt, `Error reading file: ${err.message}`, 'error');
+            console.error(err);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// ─── FAKE EMAIL DETECTION ─────────────────────────────────────
+const FAKE_PATTERNS = [
+    /noemail/i, /no_email/i, /no\.email/i, /noemailaddress/i,
+    /donotcontact/i, /donotuse/i, /invalid/i, /unknown@/i,
+    /notavailable/i, /^na@/i, /\bn\/a\b/i,
+    /fake/i, /test@test/i, /\bexample\.com$/i, /placeholder/i,
+    /^none@/i, /^null@/i, /^nobody@/i, /^noreply@/i,
+    /^x{2,}@/i, /^xxx/i, /@none\./i, /@noemail\./i, /refused/i
+];
+const FAKE_DOMAINS = new Set([
+    'mailinator.com','guerrillamail.com','temp-mail.org','throwam.com',
+    'maildrop.cc','trashmail.com','yopmail.com','dispostable.com',
+    'sharklasers.com','spam4.me','trashmail.me','guerrillamailblock.com'
+]);
+
+function isFakeEmail(val) {
+    if (val === null || val === undefined) return true;
+    const v = String(val).trim();
+    if (v === '') return true;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return true;
+    if (FAKE_PATTERNS.some(p => p.test(v))) return true;
+    const domain = v.split('@')[1]?.toLowerCase() || '';
+    return FAKE_DOMAINS.has(domain);
+}
+
+// ─── EMAIL TO EMAIL DEDUPLICATION ─────────────────────────────
+function deduplicateEmailToEmail(lt, rows, emailCol, scoreCol, siteCol, donorIdCol) {
+    if (!emailCol) return { kept: rows, removed: [] };
+    const groups = new Map();
+    const kept = [];
+    const removed = [];
+
+    addAudit(lt, `\n--- STARTING EMAIL TO EMAIL DE-DUPLICATION CHECK ---`);
+
+    rows.forEach(row => {
+        const emailKey = String(row[emailCol] || '').trim().toLowerCase();
+        if (!emailKey) {
+            kept.push(row);
+        } else {
+            if (!groups.has(emailKey)) groups.set(emailKey, []);
+            groups.get(emailKey).push(row);
+        }
+    });
+
+    groups.forEach((instances, email) => {
+        if (instances.length === 1) {
+            kept.push(instances[0]);
+        } else {
+            instances.sort((a, b) => (parseFloat(b[scoreCol]) || 0) - (parseFloat(a[scoreCol]) || 0));
+            kept.push(instances[0]);
+            
+            instances.forEach((inst, idx) => {
+                const score = inst[scoreCol] !== undefined ? inst[scoreCol] : 'N/A';
+                if (idx > 0) {
+                    let sjContextStr = "";
+                    if (siteCol && inst[siteCol]) {
+                        const siteVal = String(inst[siteCol]).trim();
+                        if (siteVal === 'CE-JHN') {
+                            const hasId = (donorIdCol && inst[donorIdCol] !== undefined && String(inst[donorIdCol]).trim() !== "");
+                            sjContextStr = `<span style="display:inline-block; margin-bottom:4px; padding:2px 6px; font-size:0.85em; font-weight:bold; border-radius:2px; background:#e0f2fe; color:#0369a1;">CE-JHN Donor: ${hasId ? 'TRUE' : 'FALSE'}</span><br>`;
+                        }
+                    }
+
+                    let reasonStr = `${sjContextStr}<strong>Duplicate Email Entry: "${email}"</strong><br>`;
+                    reasonStr += `<div style="margin-top:4px; padding:6px; background:var(--bg); border:1px solid var(--border); border-radius:2px; font-size:0.9em; line-height:1.4;">`;
+                    reasonStr += `<strong>Instances Found:</strong> ${instances.length}<br>`;
+                    reasonStr += `<strong>Score:</strong> ${score}<br>`;
+                    reasonStr += `<hr style="margin:4px 0; border:none; border-top:1px dashed var(--border-dark);">`;
+                    reasonStr += `<em><strong>Kept Record Score:</strong> ${instances[0][scoreCol] || 'N/A'}</em>`;
+                    reasonStr += `</div>`;
+
+                    removed.push({ ...inst, _removeReason: reasonStr });
+                }
+            });
+        }
+    });
+
+    return { kept, removed };
+}
+
+// ─── MAIN PROCESSING ENGINE ───────────────────────────────────
+function triggerProcess(lt) {
+    const rows = state[lt].rawData;
+    if (!rows.length) return addLog(lt, 'No data loaded.', 'error');
+    
+    state[lt].originalInputCount = rows.length;
+    state[lt].removed = { id: [], fake: [] };
+
+    const headers = Object.keys(rows[0] || {});
+
+    const siteColRaw    = document.getElementById(`${lt}_siteCol`).value.trim();
+    const scoreColRaw   = document.getElementById(`${lt}_scoreCol`).value.trim();
+    const emailColRaw   = document.getElementById(`${lt}_emailCol`).value.trim();
+    const donorIdColRaw = document.getElementById(`${lt}_donorIdCol`).value.trim();
+    const percent       = parseInt(document.getElementById(`${lt}_percent`).value) || 10;
+
+    const siteCol    = resolveSiteColumn(headers, siteColRaw);
+    const scoreCol   = resolveScoreColumn(headers, scoreColRaw);
+    const emailCol   = resolveEmailColumn(headers, emailColRaw); 
+    const donorIdCol = resolveDonorIdColumn(headers, donorIdColRaw);
+
+    if (!siteCol) {
+        addLog(lt, `Site Acronym column could not be located.`, 'error');
+        return;
+    }
+    if (!emailCol) {
+        addLog(lt, `Email Address column could not be located.`, 'error');
+        return;
+    }
+    
+    addLog(lt, `Starting optimization passes...`, 'dim');
+
+    // Filter Out Fake Emails
+    const fakeRemoved = [];
+    const afterFake = [];
+    rows.forEach(row => {
+        if (isFakeEmail(row[emailCol])) {
+            let sjContextStr = "";
+            if (siteCol && row[siteCol]) {
+                if (String(row[siteCol]).trim() === 'CE-JHN') {
+                    const hasId = (donorIdCol && row[donorIdCol] !== undefined && String(row[donorIdCol]).trim() !== "");
+                    sjContextStr = `<span style="display:inline-block; margin-bottom:4px; padding:2px 6px; font-size:0.85em; font-weight:bold; border-radius:2px; background:#e0f2fe; color:#0369a1;">CE-JHN Donor: ${hasId ? 'TRUE' : 'FALSE'}</span><br>`;
+                }
+            }
+            fakeRemoved.push({ ...row, _removeReason: `${sjContextStr}Fake or missing email address: "${String(row[emailCol]||'')}"` });
+        } else {
+            afterFake.push(row);
+        }
+    });
+
+    // Deduplicate emails
+    const { kept: afterDedupe, removed: idDupeRows } = deduplicateEmailToEmail(lt, afterFake, emailCol, scoreCol, siteCol, donorIdCol);
+    
+    // Isolate Saint John entries explicitly from the full raw layout for confirmation tab
+    const saintJohnModalRows = [];
+    rows.forEach(row => {
+        if (siteCol && row[siteCol] && String(row[siteCol]).trim() === 'CE-JHN') {
+            const hasId = (donorIdCol && row[donorIdCol] !== undefined && String(row[donorIdCol]).trim() !== "");
+            saintJohnModalRows.push({
+                ...row,
+                _removeReason: `<span style="display:inline-block; padding:4px 8px; border-radius:3px; font-weight:600; background:${hasId?'#dcfce7':'#fee2e2'}; color:${hasId?'#15803d':'#b91c1c'};">CE-JHN Donor: ${hasId?'TRUE':'FALSE'}</span>`
+            });
+        }
+    });
+
+    const tabs = [];
+    if (fakeRemoved.length > 0) {
+        tabs.push({ id: 'tab_fake_em', label: 'Fake/Missing Emails', rows: fakeRemoved, stepType: 'fake' });
+    }
+    if (idDupeRows.length > 0) {
+        tabs.push({ id: 'tab_id_dupe', label: `Email Duplicates (${idDupeRows.length})`, rows: idDupeRows, stepType: 'id' });
+    }
+    // Always attach informational audit tab for Saint John if matching files are spotted
+    tabs.push({ id: 'tab_st_jhn', label: `Saint John Records (${saintJohnModalRows.length})`, rows: saintJohnModalRows, stepType: 'info_view' });
+
+    addLog(lt, `Opening data verification module summary...`, 'warn');
+    
+    openGenericModal(lt, 'Initial Structural Processing Overview', tabs, afterDedupe, (rescuedAll) => {
+        const finalData = [...afterDedupe, ...rescuedAll].map(r => {
+            const c = {...r}; delete c._removeReason; return c;
+        });
+        runSegmentation(lt, finalData, siteCol, scoreCol, donorIdCol, percent);
+    });
+}
+
+// ─── NC TARGETED SEGMENTATION MATRIX ───
+function runSegmentation(lt, data, siteCol, scoreCol, donorIdCol, percent) {
+    const combined = [];
+    const bySite   = { 'WA-GFE': [], 'CE-JHN': [] };
+
+    const groups = {};
+    data.forEach(row => {
+        const site = String(row[siteCol] || 'Uncategorized').trim();
+        if (!groups[site]) groups[site] = [];
+        groups[site].push(row);
+    });
+
+    Object.keys(groups).forEach(site => {
+        const siteRows = groups[site];
+        
+        if (site === 'WA-GFE') {
+            siteRows.sort((a, b) => (parseFloat(b[scoreCol]) || 0) - (parseFloat(a[scoreCol]) || 0));
+            const cutoffIndex = Math.ceil(siteRows.length * (percent / 100));
+
+            siteRows.forEach((row, i) => {
+                const segment = i < cutoffIndex ? 'hycmidlevel' : 'hycstandard';
+                const tagged = { ...row, hycsegment: segment, issaintjohndonor: "" };
+                combined.push(tagged);
+                if (segment === 'hycmidlevel') bySite['WA-GFE'].push(tagged);
+            });
+        } else if (site === 'CE-JHN') {
+            siteRows.forEach(row => {
+                let isSaintJohn = "FALSE";
+                if (donorIdCol && row[donorIdCol] !== undefined && String(row[donorIdCol]).trim() !== "") {
+                    isSaintJohn = "TRUE";
+                }
+                const tagged = { ...row, hycsegment: 'hycstandard', issaintjohndonor: isSaintJohn };
+                combined.push(tagged);
+                bySite['CE-JHN'].push(tagged);
+            });
+        } else {
+            siteRows.forEach(row => {
+                const tagged = { ...row, hycsegment: 'hycstandard', issaintjohndonor: "" };
+                combined.push(tagged);
+            });
+        }
+    });
+
+    addLog(lt, `Dataset calculation passes successful. Output prepared.`, 'success');
+    displayResults(lt, combined, bySite, state[lt].originalInputCount);
+}
+
+// ─── UNIFIED MODAL DIALOG DISPLAY ───
+function openGenericModal(lt, title, tabsConfig, cleanData, onConfirmFn) {
+    pendingClean = { lt, tabsConfig, cleanData, onConfirm: onConfirmFn };
+    document.getElementById('modalTitle').textContent = `${title}`;
+    
+    const tabBar = document.getElementById('modalTabs');
+    const body   = document.getElementById('modalBody');
+    tabBar.innerHTML = '';
+    body.innerHTML   = '';
+
+    tabsConfig.forEach((tab, i) => {
+        const btn = document.createElement('button');
+        const isInfo = tab.stepType === 'info_view';
+        btn.className = `modal-tab${i === 0 ? ' active' : ''}${tab.rows.length && !isInfo ? ' has-items' : ''}${isInfo ? ' info-tab' : ''}`;
+        btn.dataset.tabId = tab.id;
+        btn.innerHTML = `${tab.label} <span class="tab-count">${tab.rows.length}</span>`;
+        btn.onclick = () => switchTab(tab.id);
+        tabBar.appendChild(btn);
+
+        const pane = document.createElement('div');
+        pane.className = `tab-pane${i === 0 ? ' active' : ''}`;
+        pane.id = tab.id;
+        pane.appendChild(buildTabContent(tab.rows, tab.id, tab.stepType));
+        body.appendChild(pane);
+    });
+
+    updateModalFooter();
+    document.getElementById('previewModal').classList.add('active');
+}
+
+function buildTabContent(rows, tabId, stepType) {
+    if (!rows.length) {
+        const el = document.createElement('div');
+        el.className = 'empty-pane';
+        el.textContent = '✓ No records found inside this metric filter.';
+        return el;
+    }
+    const wrap = document.createElement('div');
+    const ctrl = document.createElement('div');
+    ctrl.className = 'select-controls';
+    
+    if (stepType === 'info_view') {
+        ctrl.innerHTML = `<span>Reviewing calculated Saint John (CE-JHN) status fields mapping rules (Informational Summary Only):</span>`;
+    } else {
+        ctrl.innerHTML = `<span>Flagged records — uncheck row to rescue it back into the main dataset:</span>
+            <span class="select-link" onclick="setAllChecked('${tabId}',true)">Check all</span>
+            <span class="select-link" onclick="setAllChecked('${tabId}',false)">Uncheck all</span>`;
+    }
+    wrap.appendChild(ctrl);
+
+    const tw = document.createElement('div');
+    tw.className = 'preview-table-wrap';
+    const baseRowObj = rows[0];
+    const sampleCols = Object.keys(baseRowObj).filter(k => !k.startsWith('_')).slice(0, 8);
+
+    let html = `<table class="preview-table"><thead><tr>
+        <th>${stepType==='info_view'?'Status':'Remove?'}</th>
+        <th>Modification Details</th>
+        ${sampleCols.map(c => `<th>${c}</th>`).join('')}
+    </tr></thead><tbody>`;
+
+    rows.forEach((row, idx) => {
+        const rowId = `${tabId}_row_${idx}`;
+        html += `<tr id="tr_${rowId}">
+            <td class="keep-cell">
+                ${stepType==='info_view' ? 'ℹ️' : `<input type="checkbox" class="keep-checkbox" id="${rowId}" checked onchange="toggleRow('${rowId}',this.checked)">`}
+            </td>
+            <td class="reason-cell">${row._removeReason||''}</td>
+            ${sampleCols.map(c => `<td title="${String(row[c]||'').replace(/"/g, '&quot;')}">${trunc(String(row[c]||''),24)}</td>`).join('')}
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    tw.innerHTML = html;
+    wrap.appendChild(tw);
+    return wrap;
+}
+
+function trunc(s, n) { return s.length > n ? s.slice(0,n)+'…' : s; }
+function switchTab(id) {
+    document.querySelectorAll('.modal-tab').forEach(b => b.classList.toggle('active', b.dataset.tabId===id));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id===id));
+}
+function toggleRow(rowId, checked) {
+    document.getElementById(`tr_${rowId}`).classList.toggle('row-rescue', !checked);
+    updateModalFooter();
+}
+function setAllChecked(tabId, checked) {
+    document.querySelectorAll(`#${tabId} .keep-checkbox`).forEach(cb => {
+        cb.checked = checked;
+        document.getElementById(`tr_${cb.id}`).classList.toggle('row-rescue', !checked);
+    });
+    updateModalFooter();
+}
+function updateModalFooter() {
+    const activeBoxes = document.querySelectorAll('#modalBody .keep-checkbox');
+    const all  = activeBoxes.length;
+    const rem  = document.querySelectorAll('#modalBody .keep-checkbox:checked').length;
+    document.getElementById('modalFooterInfo').textContent = all > 0 ? `${all} records flagged — (${rem}) will be discarded, (${all-rem}) rescued.` : "Informational fields mapped. Structural verification complete.";
+}
+function cancelPreview() {
+    document.getElementById('previewModal').classList.remove('active');
+    if (pendingClean) addLog(pendingClean.lt, 'Operation terminated by user.', 'warn');
+    pendingClean = null;
+}
+
+function confirmCleaning() {
+    if (!pendingClean) return;
+    const rescuedAll = [];
+    const removedByStep = {};
+    
+    pendingClean.tabsConfig.forEach(tab => {
+        if (tab.stepType === 'info_view') return; // Skip information tab lines
+        const { rescued, removed } = getRescuedAndRemoved(tab.id, tab.rows);
+        rescuedAll.push(...rescued);
+        if (!removedByStep[tab.stepType]) removedByStep[tab.stepType] = [];
+        removedByStep[tab.stepType].push(...removed);
+    });
+
+    for (const [stepType, rmArr] of Object.entries(removedByStep)) {
+        const cleanRemoved = rmArr.map(r => { const c = {...r}; delete c._removeReason; return c; });
+        state[pendingClean.lt].removed[stepType].push(...cleanRemoved);
+    }
+
+    pendingClean.onConfirm(rescuedAll);
+    document.getElementById('previewModal').classList.remove('active');
+    pendingClean = null;
+}
+
+function getRescuedAndRemoved(tabId, originalRows) {
+    const rescued = [];
+    const removed = [];
+    document.querySelectorAll(`#${tabId} .keep-checkbox`).forEach((cb, idx) => {
+        if (originalRows[idx]) {
+            if (!cb.checked) rescued.push(originalRows[idx]);
+            else removed.push(originalRows[idx]);
+        }
+    });
+    return { rescued, removed };
+}
+
+// ─── RESULTS METRICS GRAPHICS ───
+function displayResults(lt, combined, bySite, inputCount) {
+    const midRows  = combined.filter(r => r.hycsegment === 'hycmidlevel');
+    const stdRows  = combined.filter(r => r.hycsegment === 'hycstandard');
+    const sjTotal  = bySite['CE-JHN'] ? bySite['CE-JHN'].length : 0;
+    const removed  = inputCount - combined.length;
+
+    let removedDownloadsHtml = '';
+    const rm = state[lt].removed;
+    if (rm.id.length || rm.fake.length) {
+        removedDownloadsHtml += `<div class="section-divider">Removed Suppression Data Logs (CSV)</div>`;
+        removedDownloadsHtml += `<div class="download-grid">`;
+        if (rm.id.length) removedDownloadsHtml += createRemovedDlCard(lt, 'Removed Email Duplicates', rm.id.length, 'id');
+        if (rm.fake.length) removedDownloadsHtml += createRemovedDlCard(lt, 'Removed Fake Emails', rm.fake.length, 'fake');
+        removedDownloadsHtml += `</div>`;
+    }
+
+    const container = document.getElementById(`${lt}_results`);
+    container.style.display = 'block';
+    container.innerHTML = `
+        <div class="results-title">NC Split Results Output</div>
+        <div class="stats-strip">
+            <div class="stat-cell"><span class="stat-num">${inputCount}</span><span class="stat-lbl">Input Rows</span></div>
+            <div class="stat-cell"><span class="stat-num red">${removed}</span><span class="stat-lbl">Suppressed</span></div>
+            <div class="stat-cell"><span class="stat-num blue">${combined.length}</span><span class="stat-lbl">Final Processed</span></div>
+            <div class="stat-cell"><span class="stat-num green">${midRows.length}</span><span class="stat-lbl">hycmidlevel (WA-GFE)</span></div>
+            <div class="stat-cell"><span class="stat-num">${stdRows.length}</span><span class="stat-lbl">hycstandard</span></div>
+            <div class="stat-cell"><span class="stat-num blue">${sjTotal}</span><span class="stat-lbl">Total CE-JHN Records</span></div>
+        </div>
+        <div class="downloads-label">Output File Exports</div>
+        <div class="download-grid" id="${lt}_dlGrid"></div>
+        ${removedDownloadsHtml}
+    `;
+
+    const grid = document.getElementById(`${lt}_dlGrid`);
+    const masterKey = `${lt}_combined`;
+    dlStore[masterKey] = combined;
+    addDlCard(grid, `Full NC Segmented List (All Records)`, combined.length, masterKey, true, lt);
+
+    if ((bySite['WA-GFE'] && bySite['WA-GFE'].length > 0) || (bySite['CE-JHN'] && bySite['CE-JHN'].length > 0)) {
+        const div = document.createElement('div');
+        div.style.gridColumn = '1/-1';
+        div.className = 'section-divider';
+        div.textContent = 'Isolated Site Targets';
+        grid.appendChild(div);
+        
+        if (bySite['WA-GFE'] && bySite['WA-GFE'].length > 0) {
+            const key = `${lt}_site_WA_GFE`;
+            dlStore[key] = bySite['WA-GFE'];
+            addDlCard(grid, 'WA-GFE Mid-Level Subset Only', bySite['WA-GFE'].length, key, false, lt);
+        }
+
+        if (bySite['CE-JHN'] && bySite['CE-JHN'].length > 0) {
+            const key = `${lt}_site_CE_JHN`;
+            dlStore[key] = bySite['CE-JHN'];
+            addDlCard(grid, 'CE-JHN Isolated Segment File', bySite['CE-JHN'].length, key, false, lt);
+        }
+    }
+}
+
+function addDlCard(container, name, count, key, featured, lt) {
+    const card = document.createElement('div');
+    card.className = `dl-card${featured?' featured':''}`;
+    const fmtId = `fmt_${key}`;
+    card.innerHTML = `
+        <div class="dl-name">${name}</div>
+        <div class="dl-count">${count} records processed</div>
+        <div class="dl-row">
+            <select class="dl-select" id="${fmtId}">
+                <option value="csv">CSV (.csv)</option>
+                <option value="xlsx">Excel (.xlsx)</option>
+            </select>
+            <button class="dl-btn" onclick="triggerDownload('${key}','${name.replace(/'/g,"\\'")}','${fmtId}')">↓ Save</button>
+        </div>`;
+    container.appendChild(card);
+}
+
+function createRemovedDlCard(lt, name, count, stepType) {
+    return `
+        <div class="dl-card">
+            <div class="dl-name" style="color:var(--red)">${name}</div>
+            <div class="dl-count">${count} rows excluded</div>
+            <div class="dl-row">
+                <button class="dl-btn" style="width:100%; background:var(--red)" onclick="triggerRemovedDownload('${lt}', '${stepType}', '${name.replace(/'/g,"\\'").replace(/\s/g,'_')}')">↓ Save Suppressed CSV</button>
+            </div>
+        </div>`;
+}
+
+function triggerRemovedDownload(lt, stepType, name) {
+    const data = state[lt].removed[stepType];
+    const suggested = `${name.toLowerCase()}.csv`;
+    const blob = new Blob([Papa.unparse(data)], {type:'text/csv'});
+    const a = Object.assign(document.createElement('a'), {href:URL.createObjectURL(blob), download:suggested});
+    a.click(); URL.revokeObjectURL(a.href);
+}
+
+async function triggerDownload(key, name, fmtId) {
+    const data      = dlStore[key];
+    const format    = document.getElementById(fmtId).value;
+    const suggested = `${name.toLowerCase().replace(/[^a-z0-9]+/g,'_')}.${format}`;
+    const lt        = 'std';
+
+    try {
+        if (window.showSaveFilePicker) {
+            const handle = await window.showSaveFilePicker({
+                suggestedName: suggested,
+                types:[{ description: format==='csv'?'CSV File':'Excel File',
+                    accept: format==='csv' ? {'text/csv':['.csv']} : {'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']} }]
+            });
+            const w = await handle.createWritable();
+            if (format==='csv') {
+                await w.write(Papa.unparse(data));
+            } else {
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Data');
+                await w.write(XLSX.write(wb,{bookType:'xlsx',type:'array'}));
+            }
+            await w.close();
+            addLog(lt, `Saved output spreadsheet structure: ${suggested}`, 'success');
+        } else {
+            if (format==='csv') {
+                const blob = new Blob([Papa.unparse(data)],{type:'text/csv'});
+                const a = Object.assign(document.createElement('a'), {href:URL.createObjectURL(blob), download:suggested});
+                a.click(); URL.revokeObjectURL(a.href);
+            } else {
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Data');
+                XLSX.writeFile(wb, suggested);
+            }
+            addLog(lt, `Downloaded output file package: ${suggested}`, 'info');
+        }
+    } catch(err) {
+        if (err.name !== 'AbortError') addLog(lt, `Export failure notice: ${err.message}`, 'error');
+    }
+}
+
+// ─── INITIALIZATION ───────────────────────────────────────────
+setupFileInput('std');
+document.getElementById('std_processBtn').addEventListener('click', () => triggerProcess('std'));
+</script>
+</body>
+</html>

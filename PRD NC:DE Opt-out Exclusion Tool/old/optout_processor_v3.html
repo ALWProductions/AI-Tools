@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Opt-Out Processor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f5f4;
+    --surface: #ffffff;
+    --border: #d4d4d0;
+    --border-light: #e8e8e5;
+    --text: #1c1c1a;
+    --text-muted: #6b6b67;
+    --accent: #3a3a38;
+    --green: #2d6a4f;
+    --green-bg: #edf5f0;
+    --red: #b91c1c;
+    --red-bg: #fef2f2;
+    --blue: #1d4ed8;
+    --blue-bg: #eff6ff;
+    --radius: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 24px 20px;
+    min-height: 100vh;
+  }
+
+  .page-header {
+    max-width: 860px;
+    margin: 0 auto 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .page-header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+
+  .page-header p {
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-size: 13px;
+  }
+
+  .badge {
+    display: inline-block;
+    background: var(--green-bg);
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 20px;
+    border: 1px solid #b7deca;
+    margin-top: 8px;
+  }
+
+  .sections {
+    max-width: 860px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: #fafaf9;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .section-num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .section-title {
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .section-desc {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-top: 1px;
+  }
+
+  .section-body {
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .upload-zone {
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    background: #fafaf9;
+    position: relative;
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent);
+    background: #f5f5f4;
+  }
+
+  .upload-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .upload-icon {
+    font-size: 22px;
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .upload-label {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .upload-label strong {
+    color: var(--text);
+  }
+
+  .file-loaded {
+    font-size: 12px;
+    color: var(--green);
+    font-weight: 500;
+    margin-top: 6px;
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  button {
+    padding: 7px 14px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.15s, opacity 0.15s;
+    font-family: inherit;
+  }
+
+  button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: #2a2a28;
+  }
+
+  .btn-save {
+    background: var(--green);
+    color: #fff;
+    border-color: var(--green);
+  }
+
+  .btn-save:hover:not(:disabled) {
+    background: #245a42;
+  }
+
+  .btn-reset {
+    background: transparent;
+    color: var(--text-muted);
+    border-color: var(--border);
+  }
+
+  .btn-reset:hover:not(:disabled) {
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  .filename-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .filename-input {
+    flex: 1;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-family: inherit;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .filename-input:focus {
+    border-color: var(--accent);
+  }
+
+  .filename-ext {
+    color: var(--text-muted);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .stats-bar {
+    display: flex;
+    gap: 16px;
+    padding: 10px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .stat-value {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  .stat.removed .stat-value { color: var(--red); }
+  .stat.kept .stat-value { color: var(--green); }
+  .stat.total .stat-value { color: var(--text); }
+
+  .status-msg {
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    border: 1px solid;
+  }
+
+  .status-msg.success {
+    background: var(--green-bg);
+    color: var(--green);
+    border-color: #b7deca;
+  }
+
+  .status-msg.error {
+    background: var(--red-bg);
+    color: var(--red);
+    border-color: #fca5a5;
+  }
+
+  .status-msg.info {
+    background: var(--blue-bg);
+    color: var(--blue);
+    border-color: #bfdbfe;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border-light);
+  }
+
+  .note {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Opt-Out Processor</h1>
+  <p>Upload CSV files to filter, clean, and deduplicate against the CE-JHN Never Opt-Out list.</p>
+  <span class="badge">✓ CE-JHN Never Opt-Out list loaded — 227 records</span>
+</div>
+
+<div class="sections">
+
+  <!-- SECTION 1: NC Opt-Outs -->
+  <div class="section" id="sec1">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div>
+        <div class="section-title">NC Opt-Outs</div>
+        <div class="section-desc">Extract email column only · Remove records matching CE-JHN Never Opt-Out list</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="upload-zone" id="zone1">
+        <input type="file" accept=".csv" onchange="handleFile(1, this)">
+        <span class="upload-icon">📄</span>
+        <div class="upload-label"><strong>Click to upload</strong> or drag & drop a CSV file</div>
+        <div class="file-loaded" id="fileLabel1"></div>
+      </div>
+      <div id="stats1"></div>
+      <div id="msg1"></div>
+      <hr class="divider">
+      <div class="filename-row">
+        <input type="text" class="filename-input" id="fname1" placeholder="Enter output filename" value="NC_OptOuts_Cleaned">
+        <span class="filename-ext">.csv</span>
+      </div>
+      <div class="actions">
+        <button class="btn-save" id="saveBtn1" onclick="saveCSV(1)" disabled>⬇ Download CSV</button>
+        <button class="btn-reset" onclick="resetSection(1)">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: DE Opt-Outs -->
+  <div class="section" id="sec2">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div>
+        <div class="section-title">DE Opt-Outs</div>
+        <div class="section-desc">Extract email column only · Remove records matching CE-JHN Never Opt-Out list</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="upload-zone" id="zone2">
+        <input type="file" accept=".csv" onchange="handleFile(2, this)">
+        <span class="upload-icon">📄</span>
+        <div class="upload-label"><strong>Click to upload</strong> or drag & drop a CSV file</div>
+        <div class="file-loaded" id="fileLabel2"></div>
+      </div>
+      <div id="stats2"></div>
+      <div id="msg2"></div>
+      <hr class="divider">
+      <div class="filename-row">
+        <input type="text" class="filename-input" id="fname2" placeholder="Enter output filename" value="DE_OptOuts_Cleaned">
+        <span class="filename-ext">.csv</span>
+      </div>
+      <div class="actions">
+        <button class="btn-save" id="saveBtn2" onclick="saveCSV(2)" disabled>⬇ Download CSV</button>
+        <button class="btn-reset" onclick="resetSection(2)">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: NC CE-JHN Opt-Outs -->
+  <div class="section" id="sec3">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div>
+        <div class="section-title">NC CE-JHN Opt-Outs</div>
+        <div class="section-desc">Filter to CE-JHN site acronym rows only · Extract email column · Remove CE-JHN Never Opt-Out matches</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="upload-zone" id="zone3">
+        <input type="file" accept=".csv" onchange="handleFile(3, this)">
+        <span class="upload-icon">📄</span>
+        <div class="upload-label"><strong>Click to upload</strong> or drag & drop a CSV file</div>
+        <div class="file-loaded" id="fileLabel3"></div>
+      </div>
+      <p class="note" id="siteColNote3"></p>
+      <div id="stats3"></div>
+      <div id="msg3"></div>
+      <hr class="divider">
+      <div class="filename-row">
+        <input type="text" class="filename-input" id="fname3" placeholder="Enter output filename" value="NC_CEJHN_OptOuts_Cleaned">
+        <span class="filename-ext">.csv</span>
+      </div>
+      <div class="actions">
+        <button class="btn-save" id="saveBtn3" onclick="saveCSV(3)" disabled>⬇ Download CSV</button>
+        <button class="btn-reset" onclick="resetSection(3)">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: CE-JHN Opt-Outs -->
+  <div class="section" id="sec4">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <div>
+        <div class="section-title">CE-JHN Opt-Outs</div>
+        <div class="section-desc">Extract email column only · Remove records matching CE-JHN Never Opt-Out list</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="upload-zone" id="zone4">
+        <input type="file" accept=".csv" onchange="handleFile(4, this)">
+        <span class="upload-icon">📄</span>
+        <div class="upload-label"><strong>Click to upload</strong> or drag & drop a CSV file</div>
+        <div class="file-loaded" id="fileLabel4"></div>
+      </div>
+      <div id="stats4"></div>
+      <div id="msg4"></div>
+      <hr class="divider">
+      <div class="filename-row">
+        <input type="text" class="filename-input" id="fname4" placeholder="Enter output filename" value="CEJHN_OptOuts_Cleaned">
+        <span class="filename-ext">.csv</span>
+      </div>
+      <div class="actions">
+        <button class="btn-save" id="saveBtn4" onclick="saveCSV(4)" disabled>⬇ Download CSV</button>
+        <button class="btn-reset" onclick="resetSection(4)">Reset</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Embedded CE-JHN Never Opt-Out list ──────────────────────────────────────
+const NEVER_OPT_OUT = new Set(["thohberg@fidm.com","margotsa111@gmail.com","corlin.richard@gmail.com","agoldman226@gmail.com","skjones@sjdcinc.com","kmehrhart@smog-ortho.net","gorlitsky@aol.com","christinehnewman@gmail.com","cfsmithco@gmail.com","jlhesburgh@comcast.net","ramonic@gmail.com","suzmschneider@gmail.com","john.robertson@providence.org","phaight@aol.com","bopbopklein@yahoo.com","bill@wesjr.org","pacpal@ix.netcom.com","paul@kaninsoffer.com","rjboemax@gmail.com","jassaf@icgadvisors.com","bf@freemanspogli.com","blowe@loweenterprises.com","rmfinwa@aol.com","jbirdwell@aristotlecap.com","carl@mckinzie.us","dftuttle@mac.com","ekadler@att.net","bruce@meyerpacific.com","abrown@ridgestonecorp.com","rwarch@gmail.com","bill@padaro.com","jhuarte@gmail.com","ppelikan@pacificheart.com","mike_sitrick@sitrick.com","catharnstrom@aol.com","dallaspricevb@gmail.com","wafaa.daou@providence.org","vbrogers@rosehillsfoundation.org","donnalisabarnum@gmail.com","cmarino@caruso.com","duketeva@gmail.com","pnatterson@pacificheart.com","leeault3@gmail.com","djorn2000@yahoo.com","mary@flaherty.cc","yolanda.luna@stjohns.org","ewhite@ewccpas.com","mkanoff@peninsulapacific.com","russ.kino@providence.org","gawillison@gmail.com","jrcolemd@outlook.com","bill@june-street.com","4bigmom@gmail.com","ernie@ernieprudente.com","bob@shuwarger.com","yolanda.brizuela@providence.org","george.davis@hwcm.com","jkaplan@douglasemmett.com","kgibello@gmail.com","lorsinsk@me.com","darcy_mullin@hotmail.com","rcrowell@vancestreetcapital.com","brian.madden@providence.org","panish@panish.law","craig.benell@morganstanleypwm.com","dseidel@ep.com","franflanagan1@gmail.com","shelbynotkin@gmail.com","david.tracy@mac.com","brianwebber1@yahoo.com","wickstromrn@gmail.com","cfacfa22@gmail.com","rbedfordmd@aol.com","donnaschweers@gmail.com","mikehopk@amazon.com","bmvandebunt@gmail.com","tobi.kinnan@stjohns.org","coco.garcia@providence.org","mcroft@cwpla.com","lisadnesbitt@gmail.com","brett.wyard@yahoo.com","holschermark@yahoo.com","janismgallo@gmail.com","dinah.lewin@providence.org","caroleschwartz@mac.com","mezralow@ezralow.com","rksinnott@me.com","sirron1801@aol.com","lksiart@gmail.com","jeannedrobinson@yahoo.com","sweathog44@gmail.com","siezman@americanreal.com","jeanne.goldsmith@providence.org","ereiter@brentwood.com","tess.csiszar@stjohns.org","anthony.cacace@stjohns.org","gail.drewniak@providence.org","sklein@beachpointcapital.com","djames@primegrp.com","putter.pence@gmail.com","justinrawlins@paulhastings.com","peter.w.wyman@gmail.com","timothy.wilson@providence.org","kimberly.krupinski@stjohns.org","michael.wise@jhsnyder.net","jennifer.linehan@providence.org","kathykbarrett@gmail.com","lawryjmeister@gmail.com","kdanhakl@gmail.com","susan@bigbiteprod.com","bob.levitt@mac.com","bleiweke@gmail.com","jonathanlcongdon@gmail.com","carysingleton1@gmail.com","egriordan141@gmail.com","m@milesfisher.com","nina.maggio@stjohns.org","karen.williams-cox@stjohns.org","michael.ricks@providence.org","danielle.partyka@providence.org","sara.butchenhart@providence.org","loren@borsteinenterprises.com","marquina.munoz-freedman@providence.org","steve.gozini@bhproperties.com","mdhpersonal@hackmancapital.com","bjohnson@toyopa.com","scottcohen43@hotmail.com","mel@nilecapitalgroup.com","stuart.berkowitz@providence.org","antonio.jsuarez@gmail.com","christineavanti@yahoo.com","sheryl.bourgeois@providence.org","laureen.driscoll@providence.org","michelle.plasse@providence.org","jennifer.wood@providence.org","schultzka8@hotmail.com","lanhee@sagehallpartners.com","morgan.culbertson@stjohns.org","denise.halloran@providence.org","smeeta.singh@providence.org","kim.kowsky@providence.org","kevin.lewin@providence.org","zohaib.ahmed@providence.org","melissa.lin4@providence.org","sue.mathews@providence.org","susan.driskill@providence.org","danny.reader@providence.org","renita.harris@providence.org","justin.cadiz@providence.org","katherine.mcmahon@providence.org","mirabai.auer@providence.org","b.temple@templecompanies.com","charles.park@providence.org","pedro.ariza@providence.org","aubcann@yahoo.com","justincadiz0427@gmail.com","katherinem.global@gmail.com","mirabaieliza@gmail.com","dbhalloran@gmail.com","smeeta.k.singh@gmail.com","khkowsky@gmail.com","kevinlewin333@gmail.com","d_reader@yahoo.com","melissalin19@gmail.com","glenn.gorlitsky@providence.org","cfxsmith@worldnet.att.net","dcohen@wesjr.org","uhavthepwr@aol.com","wesjr@wesandsons.com","paul@kaninlawcorp.com","j.assaf@verizon.net","blowe@lowe-re.com","cmckinzie.ffed@gmail.com","rae@barbarch.com","wafaa.daou@stjohns.org","vickybrogers1@gmail.com","wafaatony@yahoo.com","cgarcia@douglasemmett.com","davidho@pacificbmw.com","yoliluna@aol.com","mmwhite49@yahoo.com","russ.kino@stjohns.org","ciaomerle@mullinenterprises.com","craig.benell@ms.com","darren.seidel@gmail.com","fran@franflanagan.com","sn@capgroup.com","david.tracy@ml.com","david.tracy@me.com","ruckeradams@gmail.com","rudolph.bedford@providence.org","mikehopkinssmc@gmail.com","lfoxhome@aol.com","beach1@aol.com","coco.garcia@stjohns.org","laurafox@me.com","5trccc@gmail.com","snesbitt1@aol.com","dinah.lewin@stjohns.org","roger.wacker52@gmail.com","siezman@aracapital.com","jeanne.goldsmith@stjohns.org","ereiter01@gmail.com","theresacsiszar@gmail.com","jeanneemgoldsmith@gmail.com","gail.drewniak@stjohns.org","gadrewniak@gmail.com","majames@comcast.net","tim.wilson010@gmail.com","ljmeistr@aol.com","bob.levitt@me.com","jon@morphus.io","ninamariemaggio@gmail.com","taylor.cabri@providence.org","mike.vo2max@yahoo.com","daniparty14@gmail.com","sbutchenhart@gmail.com","quinasq7@ca.rr.com","scohen@alterme.com","cohen@aspengrovellc.com","stuartbnj@gmail.com","californiasummers@tutanota.com","bourgeoissheryl@gmail.com","ihuey.chukane@providence.org","michelleplasse@gmail.com","sheryl.bourgeois@stjohns.org"]);
+
+// ── State per section ─────────────────────────────────────────────────────────
+const state = { 1: null, 2: null, 3: null, 4: null };
+
+// ── CE-JHN site pattern ───────────────────────────────────────────────────────
+// Matches: ce-jhn, cejhn, ce jhn, and common variations (case-insensitive)
+const CEJHN_PATTERN = /\bce[\s\-_]?jhn\b/i;
+
+// ── Utility: find email column ────────────────────────────────────────────────
+function findCol(cols, keywords) {
+  const lower = cols.map(c => c.toLowerCase().trim());
+  for (const kw of keywords) {
+    const idx = lower.findIndex(c => c.includes(kw));
+    if (idx !== -1) return cols[idx];
+  }
+  return null;
+}
+
+// ── Utility: find site/acronym column ────────────────────────────────────────
+function findSiteCol(cols) {
+  const lower = cols.map(c => c.toLowerCase().trim());
+  const patterns = ['siteacronym','site_acronym','site acronym','site acronym','site-acronym','siteacro','acronym','site'];
+  for (const p of patterns) {
+    const idx = lower.findIndex(c => c.replace(/[\s_\-]/g,'').includes(p.replace(/[\s_\-]/g,'')));
+    if (idx !== -1) return cols[idx];
+  }
+  return null;
+}
+
+// ── Handle file upload ────────────────────────────────────────────────────────
+function handleFile(sec, input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  document.getElementById('fileLabel' + sec).textContent = '📎 ' + file.name;
+  showMsg(sec, 'Parsing file...', 'info');
+
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete(results) {
+      processData(sec, results.data, results.meta.fields || []);
+    },
+    error(err) {
+      showMsg(sec, 'Error reading file: ' + err.message, 'error');
+    }
+  });
+}
+
+// ── Core processing ────────────────────────────────────────────────────────────
+function processData(sec, rows, cols) {
+  const emailCol = findCol(cols, ['email','e-mail','e mail','emailaddress','email_address']);
+  if (!emailCol) {
+    showMsg(sec, `Could not find an email column. Columns found: ${cols.join(', ')}`, 'error');
+    return;
+  }
+
+  let working = rows;
+  let siteColUsed = null;
+  const originalCount = rows.length;
+
+  // Section 3: filter to CE-JHN rows first
+  if (sec === 3) {
+    siteColUsed = findSiteCol(cols);
+    if (siteColUsed) {
+      working = rows.filter(r => {
+        const val = (r[siteColUsed] || '').toString().trim();
+        return CEJHN_PATTERN.test(val);
+      });
+      document.getElementById('siteColNote3').textContent =
+        `Site column detected: "${siteColUsed}" — ${working.length} of ${originalCount} rows matched CE-JHN.`;
+    } else {
+      // No site column found — warn user but continue with all rows
+      document.getElementById('siteColNote3').textContent =
+        `⚠ No site/siteacronym column found. Columns: ${cols.join(', ')}. Processing all rows without site filter.`;
+    }
+  }
+
+  // Extract emails, normalize
+  const beforeDedupe = working.length;
+  let emails = working
+    .map(r => (r[emailCol] || '').toString().trim())
+    .filter(e => e.length > 0);
+
+  // Remove duplicates within the file
+  const seen = new Set();
+  const unique = emails.filter(e => {
+    const key = e.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  // Remove against Never Opt-Out list
+  const filtered = unique.filter(e => !NEVER_OPT_OUT.has(e.toLowerCase()));
+  const removed = unique.length - filtered.length;
+  const dupeCount = emails.length - unique.length;
+
+  state[sec] = filtered;
+
+  // Stats
+  renderStats(sec, {
+    original: sec === 3 ? originalCount : emails.length,
+    afterSiteFilter: sec === 3 ? beforeDedupe : null,
+    dupes: dupeCount,
+    removed,
+    final: filtered.length
+  }, sec === 3);
+
+  showMsg(sec,
+    `✓ Ready. ${filtered.length} email${filtered.length !== 1 ? 's' : ''} will be saved.`,
+    'success'
+  );
+
+  document.getElementById('saveBtn' + sec).disabled = false;
+}
+
+// ── Render stats ──────────────────────────────────────────────────────────────
+function renderStats(sec, s, isSec3) {
+  const el = document.getElementById('stats' + sec);
+  let html = '<div class="stats-bar">';
+  if (isSec3 && s.afterSiteFilter !== null) {
+    html += statHTML('total', s.original, 'Total Rows');
+    html += statHTML('removed', s.original - s.afterSiteFilter, 'Non-CE-JHN Removed');
+    html += statHTML('total', s.afterSiteFilter, 'After Site Filter');
+  } else {
+    html += statHTML('total', s.original, 'Total Rows');
+  }
+  if (s.dupes > 0) html += statHTML('removed', s.dupes, 'Duplicates Removed');
+  html += statHTML('removed', s.removed, 'Opt-Out Matches');
+  html += statHTML('kept', s.final, 'Final Emails');
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function statHTML(cls, val, label) {
+  return `<div class="stat ${cls}"><span class="stat-value">${val.toLocaleString()}</span><span class="stat-label">${label}</span></div>`;
+}
+
+// ── Show message ──────────────────────────────────────────────────────────────
+function showMsg(sec, text, type) {
+  document.getElementById('msg' + sec).innerHTML =
+    `<div class="status-msg ${type}">${text}</div>`;
+}
+
+// ── Save CSV ──────────────────────────────────────────────────────────────────
+function saveCSV(sec) {
+  const emails = state[sec];
+  if (!emails || emails.length === 0) {
+    showMsg(sec, 'No data to save.', 'error');
+    return;
+  }
+
+  const fname = (document.getElementById('fname' + sec).value.trim() || `section${sec}_output`) + '.csv';
+  const csvContent = 'Email\n' + emails.join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fname;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  showMsg(sec, `✓ Saved as "${fname}"`, 'success');
+}
+
+// ── Reset section ─────────────────────────────────────────────────────────────
+function resetSection(sec) {
+  state[sec] = null;
+  document.getElementById('fileLabel' + sec).textContent = '';
+  document.getElementById('stats' + sec).innerHTML = '';
+  document.getElementById('msg' + sec).innerHTML = '';
+  document.getElementById('saveBtn' + sec).disabled = true;
+  if (sec === 3) document.getElementById('siteColNote3').textContent = '';
+  // Reset file input
+  const zone = document.getElementById('zone' + sec);
+  const input = zone.querySelector('input[type="file"]');
+  input.value = '';
+}
+
+// ── Drag-and-drop feedback ────────────────────────────────────────────────────
+document.querySelectorAll('.upload-zone').forEach(zone => {
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const input = zone.querySelector('input[type="file"]');
+    if (e.dataTransfer.files.length) {
+      input.files = e.dataTransfer.files;
+      input.dispatchEvent(new Event('change'));
+    }
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>South New Donor Welcome - Prep Tool v3</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; padding: 40px; color: #1e293b; }
+        .container { max-width: 900px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); padding: 40px; border: 1px solid #e2e8f0; }
+        h1 { color: #0f172a; margin-bottom: 8px; font-size: 22px; }
+        p.subtitle { color: #64748b; margin-bottom: 24px; font-size: 14px; }
+        .upload-area { border: 2px dashed #cbd5e1; padding: 40px; border-radius: 8px; text-align: center; background: #f1f5f9; cursor: pointer; transition: all 0.2s; display: block; }
+        .upload-area:hover { border-color: #3b82f6; background: #eff6ff; }
+        input[type="file"] { display: none; }
+        .btn { display: inline-block; padding: 12px 24px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 20px; font-size: 15px; }
+        .btn-download { background: #059669; display: none; }
+        .status { margin-top: 20px; padding: 12px; border-radius: 6px; font-size: 14px; display: none; }
+        .status.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; display: block; }
+        .status.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; display: block; }
+        .preview-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px; display: none; }
+        th, td { padding: 8px; text-align: left; border: 1px solid #e2e8f0; }
+        th { background: #f8fafc; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Donor Welcome Prep Tool</h1>
+    <p class="subtitle">Supports headers: CnsSoDIVPriAffinityAttribute_VALUE or CnsPSJHCnScores_COHORT</p>
+
+    <label for="fileInput" class="upload-area">
+        <strong>Click to Upload Client List</strong><br>
+        <span style="font-size: 12px; color: #64748b;">Accepts .csv, .xlsx, .xls</span>
+    </label>
+    <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
+
+    <div id="statusBox" class="status"></div>
+    <button id="downloadBtn" class="btn btn-download">Download Prepped CSV</button>
+
+    <table id="previewTable" class="preview-table"></table>
+</div>
+
+<script>
+    const fileInput = document.getElementById('fileInput');
+    const statusBox = document.getElementById('statusBox');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const previewTable = document.getElementById('previewTable');
+
+    let processedData = [];
+
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const isCSV = file.name.toLowerCase().endsWith('.csv');
+        if (isCSV) {
+            Papa.parse(file, { header: true, skipEmptyLines: true, complete: (r) => processRows(r.data) });
+        } else {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                processRows(XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]));
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    });
+
+    function processRows(rawData) {
+        if (!rawData.length) return showStatus("File is empty", "error");
+
+        const getVal = (row, target) => {
+            const key = Object.keys(row).find(k => k.trim().toLowerCase() === target.toLowerCase());
+            return key ? String(row[key]).trim() : "";
+        };
+
+        processedData = rawData.map(row => {
+            // Check both possible affinity columns
+            let rawAffinity = getVal(row, 'CnsSoDIVPriAffinityAttribute_VALUE');
+            if (!rawAffinity) rawAffinity = getVal(row, 'CnsPSJHCnScores_COHORT');
+
+            // Logic: Remove "Campus Affinity", trim, and add "CA-"
+            let cleanedAffinity = rawAffinity.replace(/Campus Affinity/gi, '').trim();
+            let siteAcronym = cleanedAffinity ? `CA-${cleanedAffinity}` : '';
+
+            return {
+                'siteacronym': siteAcronym,
+                'CnsSoDIVPriAffinityAttribute_VALUE': rawAffinity,
+                'BBCRM lookupID': getVal(row, 'Cns_LOOKUPID'),
+                'first_name': getVal(row, 'Cns_FIRSTNAME'),
+                'last_name': getVal(row, 'Cns_KEYNAME'),
+                'Email': getVal(row, 'CnsEmailAdrs_EMAILADDRESS')
+            };
+        });
+
+        showStatus(`Processed ${processedData.length} rows.`, "success");
+        renderPreview(processedData.slice(0, 5));
+        downloadBtn.style.display = 'inline-block';
+    }
+
+    function renderPreview(data) {
+        const headers = Object.keys(data[0]);
+        let html = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+        data.forEach(r => html += '<tr>' + headers.map(h => `<td>${r[h]}</td>`).join('') + '</tr>');
+        previewTable.innerHTML = html + '</tbody>';
+        previewTable.style.display = 'table';
+    }
+
+    downloadBtn.addEventListener('click', () => {
+        const csv = Papa.unparse(processedData);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "Prepped_Donor_List.csv";
+        link.click();
+    });
+
+    function showStatus(msg, type) {
+        statusBox.textContent = msg;
+        statusBox.className = 'status ' + type;
+    }
+</script>
+</body>
+</html>

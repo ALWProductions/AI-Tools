@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Validation Tool - Emma Coding Sheet Checker v2.0</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border: 1px solid #ddd;
+            padding: 30px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .version-badge {
+            display: inline-block;
+            background: #333;
+            color: white;
+            padding: 4px 8px;
+            font-size: 11px;
+            border-radius: 3px;
+            margin-left: 10px;
+        }
+        .privacy-notice {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 12px;
+            margin: 20px 0;
+            font-size: 13px;
+            color: #555;
+        }
+        .section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #fafafa;
+            border: 1px solid #ddd;
+        }
+        .section h2 {
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 16px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 6px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        input[type="file"], select {
+            width: 100%;
+            max-width: 500px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            background: white;
+            font-size: 14px;
+        }
+        .table-container {
+            overflow: auto;
+            margin-top: 12px;
+            max-height: 300px;
+            border: 1px solid #ddd;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+            min-width: 100px;
+        }
+        th {
+            background: #f0f0f0;
+            color: #333;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        th.highlight { background: #e0e0e0; }
+        td.highlight { background: #f5f5f5; }
+        td.mismatch { background: #ffe0e0; color: #d00; font-weight: 600; }
+        .btn {
+            padding: 10px 20px;
+            border: 1px solid #333;
+            background: white;
+            color: #333;
+            font-weight: 600;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background: #333;
+            color: white;
+        }
+        .btn:disabled {
+            background: #ccc;
+            border-color: #999;
+            color: #666;
+            cursor: not-allowed;
+        }
+        .btn:disabled:hover {
+            background: #ccc;
+            color: #666;
+        }
+        .btn-primary {
+            background: #333;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #555;
+        }
+        .btn-success {
+            background: #28a745;
+            border-color: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+            border-color: #1e7e34;
+        }
+        .btn-error {
+            background: #dc3545;
+            border-color: #dc3545;
+            color: white;
+        }
+        .btn-error:hover {
+            background: #c82333;
+            border-color: #bd2130;
+        }
+        .btn-warning {
+            background: #ffc107;
+            border-color: #ffc107;
+            color: #333;
+        }
+        .btn-warning:hover {
+            background: #e0a800;
+            border-color: #d39e00;
+        }
+        .status {
+            margin-top: 12px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            font-size: 13px;
+        }
+        .status.success {
+            background: #f0f0f0;
+            border: 2px solid #333;
+        }
+        .status.error {
+            background: #fff;
+            border: 2px solid #333;
+            color: #d00;
+        }
+        .ignored-fields {
+            margin-top: 10px;
+            padding: 10px;
+            background: #fff;
+            border: 1px solid #ddd;
+            font-size: 12px;
+        }
+        .ignored-fields label {
+            display: inline;
+            font-weight: normal;
+            margin-left: 5px;
+        }
+        .ignored-fields input[type="checkbox"] {
+            width: auto;
+        }
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 8px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+        }
+        .summary-box {
+            background: #fff;
+            border: 2px solid #333;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .summary-box h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .stat-item {
+            padding: 10px;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+        }
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+        .stat-value.success {
+            color: #28a745;
+        }
+        .stat-value.error {
+            color: #dc3545;
+        }
+        .version-history {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .version-history h4 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 14px;
+        }
+        .version-entry {
+            padding: 10px;
+            background: #f9f9f9;
+            border-left: 3px solid #333;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+        .version-entry.improved { border-left-color: #28a745; }
+        .version-entry.worsened { border-left-color: #dc3545; }
+        .version-timestamp { font-weight: 600; color: #333; }
+        .version-stats { margin-top: 5px; color: #666; }
+        .clear-history-btn { float: right; padding: 4px 8px; font-size: 11px; }
+
+        .field-breakdown {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .field-panel {
+            border: 1px solid #ddd;
+            background: #fff;
+            padding: 12px;
+        }
+        .field-panel h4 {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .field-panel h4 .badge {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .field-panel.compared h4 { color: #155724; }
+        .field-panel.compared h4 .badge { background: #d4edda; color: #155724; }
+        .field-panel.ignored h4 { color: #856404; }
+        .field-panel.ignored h4 .badge { background: #fff3cd; color: #856404; }
+        .field-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+        .field-tag {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .field-tag.compared-tag { background: #f0faf2; border-left: 3px solid #28a745; }
+        .field-tag.ignored-tag { background: #fffbf0; border-left: 3px solid #ffc107; }
+        .field-tag .field-name {
+            font-weight: 600;
+            color: #333;
+            min-width: 130px;
+            word-break: break-all;
+        }
+        .field-tag .field-reason {
+            color: #666;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+        .field-tag .error-count {
+            margin-left: auto;
+            white-space: nowrap;
+            font-size: 11px;
+            font-weight: 600;
+            color: #dc3545;
+        }
+
+        td.mismatch-summary {
+            background: #fff8f0;
+            font-size: 11px;
+            color: #856404;
+            min-width: 160px;
+            vertical-align: top;
+        }
+        td.mismatch-summary .mm-none {
+            color: #28a745;
+            font-weight: 600;
+        }
+        td.mismatch-summary .mm-field {
+            display: inline-block;
+            background: #ffe0e0;
+            color: #c00;
+            border-radius: 3px;
+            padding: 1px 5px;
+            margin: 1px 2px 1px 0;
+            font-weight: 600;
+            font-size: 10px;
+        }
+        th.mismatch-summary-th {
+            background: #fff0d0;
+            color: #856404;
+            min-width: 160px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Data Validation Tool - Emma Coding Sheet Checker <span class="version-badge">v2.0</span></h1>
+        
+        <div class="privacy-notice">
+            <strong>Privacy Notice:</strong> This tool runs entirely in your browser. No data is uploaded to any server. All processing happens locally on your device. Version history is stored in your browser's local storage.
+        </div>
+        
+        <div class="section">
+            <h2>1. Upload Appended Data File</h2>
+            <label for="appendedFile">Select your appended data CSV or Excel file:</label>
+            <input type="file" id="appendedFile" accept=".csv,.xlsx,.xls">
+            <div id="appendedStatus"></div>
+            <div id="appendedTableContainer" class="table-container" style="display:none;">
+                <table id="appendedTable"></table>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>2. Upload Emma Coding Sheet Reference File</h2>
+            <label for="referenceFile">Select Emma Coding Sheet reference CSV or Excel file:</label>
+            <input type="file" id="referenceFile" accept=".csv,.xlsx,.xls">
+            <div id="referenceStatus"></div>
+            <div id="referenceTableContainer" class="table-container" style="display:none;">
+                <table id="referenceTable"></table>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>3. Configure Validation Settings</h2>
+            <div class="ignored-fields">
+                <strong>Fields to Ignore During Validation:</strong>
+                <div class="checkbox-group" id="ignoredFieldsContainer">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="ignore_conid" value="con-id" checked>
+                        <label for="ignore_conid">con-id</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="ignore_hycid" value="hyc id" checked>
+                        <label for="ignore_hycid">hyc id</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="ignore_firstname" value="first_name" checked>
+                        <label for="ignore_firstname">first_name</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="ignore_lastname" value="last_name" checked>
+                        <label for="ignore_lastname">last_name</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="ignore_email" value="email address" checked>
+                        <label for="ignore_email">email address</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>4. Run Validation Check</h2>
+            <button class="btn btn-primary" id="validateBtn" onclick="runValidation()" disabled>Run Validation Check</button>
+            <div id="validationStatus"></div>
+        </div>
+
+        <div class="section" id="resultSection" style="display:none;">
+            <h2>5. Validation Results</h2>
+            <div id="summaryBox" class="summary-box"></div>
+            
+            <div style="margin-top: 20px;">
+                <button class="btn btn-success" onclick="downloadCorrectRecords()">
+                    Download Correct Records (CSV)
+                </button>
+                <button class="btn btn-error" onclick="downloadIncorrectRecords()">
+                    Download Incorrect Records (CSV)
+                </button>
+                <button class="btn" onclick="downloadBothExcel()">
+                    Download Both Sheets (Excel)
+                </button>
+                <button class="btn btn-warning" onclick="downloadErrorLog()">
+                    Download Error Log (TXT)
+                </button>
+            </div>
+
+            <div class="version-history" id="versionHistory">
+                <h4>
+                    Version History
+                    <button class="btn clear-history-btn" onclick="clearVersionHistory()">Clear History</button>
+                </h4>
+                <div id="versionEntries"></div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <h3>Correct Records Preview:</h3>
+                <div class="table-container">
+                    <table id="correctTable"></table>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <h3>Incorrect Records Preview (with mismatches highlighted):</h3>
+                <div class="table-container">
+                    <table id="incorrectTable"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let appendedData = [], appendedHeaders = [];
+        let referenceData = [], referenceHeaders = [];
+        let correctRecords = [], incorrectRecords = [];
+        let mismatchDetails = {};
+        let validationMetadata = {};
+
+        function loadVersionHistory() {
+            try {
+                const history = localStorage.getItem('validationHistory');
+                return history ? JSON.parse(history) : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveVersionHistory(history) {
+            try {
+                localStorage.setItem('validationHistory', JSON.stringify(history));
+            } catch (e) {
+                console.error('Failed to save version history:', e);
+            }
+        }
+
+        function addToVersionHistory(result) {
+            const history = loadVersionHistory();
+            history.unshift(result);
+            if (history.length > 20) history.splice(20);
+            saveVersionHistory(history);
+            displayVersionHistory();
+        }
+
+        function displayVersionHistory() {
+            const history = loadVersionHistory();
+            const container = document.getElementById('versionEntries');
+            if (!container) return;
+            
+            if (history.length === 0) {
+                container.innerHTML = '<p style="color: #999; font-style: italic;">No validation history yet.</p>';
+                return;
+            }
+
+            let html = '';
+            history.forEach((entry, index) => {
+                const timestamp = new Date(entry.timestamp).toLocaleString();
+                const errorRate = ((entry.incorrectRecords / entry.totalRecords) * 100).toFixed(1);
+                
+                let entryClass = '';
+                if (index < history.length - 1) {
+                    const prevEntry = history[index + 1];
+                    if (entry.incorrectRecords < prevEntry.incorrectRecords) {
+                        entryClass = 'improved';
+                    } else if (entry.incorrectRecords > prevEntry.incorrectRecords) {
+                        entryClass = 'worsened';
+                    }
+                }
+
+                html += `
+                    <div class="version-entry ${entryClass}">
+                        <div class="version-timestamp">Run ${history.length - index}: ${timestamp}</div>
+                        <div class="version-stats">
+                            Total: ${entry.totalRecords} | 
+                            Correct: <span style="color: #28a745;">${entry.correctRecords}</span> | 
+                            Incorrect: <span style="color: #dc3545;">${entry.incorrectRecords}</span> | 
+                            Error Rate: ${errorRate}%<br>
+                            Fields Checked: ${entry.fieldsChecked} | 
+                            Total Errors: ${entry.totalErrors}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function clearVersionHistory() {
+            if (confirm('Are you sure you want to clear all version history?')) {
+                localStorage.removeItem('validationHistory');
+                displayVersionHistory();
+            }
+        }
+
+        function parseFile(file, callback) {
+            const fileName = file.name.toLowerCase();
+            if (fileName.endsWith('.csv')) {
+                Papa.parse(file, { 
+                    complete: results => callback(results.data), 
+                    skipEmptyLines: true,
+                    error: err => {
+                        console.error('CSV parse error:', err);
+                        callback(null);
+                    }
+                });
+            } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    try {
+                        const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+                        let sheetData = null;
+                        for (const sheetName of wb.SheetNames) {
+                            const sheet = wb.Sheets[sheetName];
+                            const json = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: ''});
+                            if (json && json.length >= 2) {
+                                sheetData = json;
+                                break;
+                            }
+                        }
+                        callback(sheetData || []);
+                    } catch (err) {
+                        console.error('Excel parse error:', err);
+                        callback(null);
+                    }
+                };
+                reader.onerror = () => callback(null);
+                reader.readAsArrayBuffer(file);
+            } else {
+                callback(null);
+            }
+        }
+
+        function processData(data) {
+            if (!data || data.length < 2) return null;
+            
+            // Clean headers and strip UTF-8 BOM (\uFEFF)
+            const headers = data[0].map(h => String(h || '').replace(/^\uFEFF/, '').trim());
+            const validHeaders = headers.filter(h => h.length > 0);
+            if (validHeaders.length === 0) return null;
+
+            const rows = [];
+            for (let r = 1; r < data.length; r++) {
+                const row = data[r];
+                if (!row || row.length === 0) continue;
+                const hasValue = row.some(val => val !== null && val !== undefined && String(val).trim() !== '');
+                if (!hasValue) continue;
+
+                const obj = {};
+                headers.forEach((h, i) => {
+                    if (h) {
+                        obj[h] = row[i] !== undefined && row[i] !== null ? String(row[i]).trim() : '';
+                    }
+                });
+                rows.push(obj);
+            }
+            return { headers: validHeaders, rows };
+        }
+
+        // Sanitizes text by stripping BOM, special chars, spaces, hyphens, underscores
+        function normalizeFieldName(field) {
+            if (!field) return '';
+            return String(field).replace(/^\uFEFF/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        }
+
+        // Flexible site acronym column auto-detection
+        function findSiteColumn(headers) {
+            if (!headers || !headers.length) return null;
+            const keyCandidates = ['siteacronym', 'acronym', 'siteid', 'sitecode', 'site', 'siteacronymid'];
+            
+            // 1. Check exact candidate matches
+            for (const cand of keyCandidates) {
+                const found = headers.find(h => normalizeFieldName(h) === cand);
+                if (found) return found;
+            }
+            
+            // 2. Fallback to any header containing acronym or site
+            const partialMatch = headers.find(h => {
+                const norm = normalizeFieldName(h);
+                return norm.includes('acronym') || norm.includes('site');
+            });
+            
+            return partialMatch || null;
+        }
+
+        function displayTable(tableId, headers, rows, highlightCol = null, mismatchInfo = null, isResultTable = false) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            let html = '<thead><tr>';
+            if (isResultTable) {
+                html += `<th class="mismatch-summary-th">Mismatched Fields</th>`;
+            }
+            headers.forEach(h => {
+                const cls = (highlightCol && h.toLowerCase() === highlightCol.toLowerCase()) ? 'highlight' : '';
+                html += `<th class="${cls}">${h}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            const displayRows = rows.slice(0, 100);
+            displayRows.forEach((row) => {
+                html += '<tr>';
+
+                if (isResultTable) {
+                    let mmCellHTML = '';
+                    const key = row._siteacronym;
+                    if (mismatchInfo && key) {
+                        const mismatches = mismatchInfo[key] || [];
+                        if (mismatches.length === 0) {
+                            mmCellHTML = '<span class="mm-none">✓ All match</span>';
+                        } else {
+                            mmCellHTML = mismatches.map(f => `<span class="mm-field">${f}</span>`).join('');
+                        }
+                    } else {
+                        mmCellHTML = '<span class="mm-none">✓ All match</span>';
+                    }
+                    html += `<td class="mismatch-summary">${mmCellHTML}</td>`;
+                }
+
+                headers.forEach(h => {
+                    let cls = (highlightCol && h.toLowerCase() === highlightCol.toLowerCase()) ? 'highlight' : '';
+                    
+                    if (isResultTable && mismatchInfo && row._siteacronym) {
+                        const mismatches = mismatchInfo[row._siteacronym];
+                        if (mismatches && mismatches.includes(h)) {
+                            cls += ' mismatch';
+                        }
+                    }
+                    
+                    html += `<td class="${cls}">${row[h] !== undefined ? row[h] : ''}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody>';
+            table.innerHTML = html;
+        }
+
+        function showStatus(id, msg, type) {
+            document.getElementById(id).innerHTML = `<div class="status ${type}">${msg}</div>`;
+        }
+
+        function checkValidationReady() {
+            const ready = appendedData.length > 0 && referenceData.length > 0;
+            document.getElementById('validateBtn').disabled = !ready;
+        }
+
+        document.getElementById('appendedFile').addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            parseFile(file, data => {
+                const result = processData(data);
+                if (!result) return showStatus('appendedStatus', 'Invalid or empty file format', 'error');
+                
+                appendedHeaders = result.headers;
+                appendedData = result.rows;
+                
+                const siteacronymCol = findSiteColumn(appendedHeaders);
+                
+                if (!siteacronymCol) {
+                    appendedData = [];
+                    appendedHeaders = [];
+                    checkValidationReady();
+                    return showStatus('appendedStatus', 'Could not detect a "siteacronym" or "site" column in this file.', 'error');
+                }
+                
+                showStatus('appendedStatus', `Loaded ${appendedData.length} rows, ${appendedHeaders.length} columns (Site Column: "${siteacronymCol}")`, 'success');
+                displayTable('appendedTable', appendedHeaders, appendedData, siteacronymCol, null, false);
+                document.getElementById('appendedTableContainer').style.display = 'block';
+                checkValidationReady();
+            });
+        });
+
+        document.getElementById('referenceFile').addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            parseFile(file, data => {
+                const result = processData(data);
+                if (!result) return showStatus('referenceStatus', 'Invalid or empty file format', 'error');
+                
+                referenceHeaders = result.headers;
+                referenceData = result.rows;
+                
+                const siteacronymCol = findSiteColumn(referenceHeaders);
+                
+                if (!siteacronymCol) {
+                    referenceData = [];
+                    referenceHeaders = [];
+                    checkValidationReady();
+                    return showStatus('referenceStatus', 'Could not detect a "siteacronym" or "site" column in this file.', 'error');
+                }
+                
+                showStatus('referenceStatus', `Loaded ${referenceData.length} rows, ${referenceHeaders.length} columns (Site Column: "${siteacronymCol}")`, 'success');
+                displayTable('referenceTable', referenceHeaders, referenceData, siteacronymCol, null, false);
+                document.getElementById('referenceTableContainer').style.display = 'block';
+                checkValidationReady();
+            });
+        });
+
+        function getIgnoredFields() {
+            const ignored = [];
+            document.querySelectorAll('#ignoredFieldsContainer input[type="checkbox"]:checked').forEach(cb => {
+                ignored.push(normalizeFieldName(cb.value));
+            });
+            return ignored;
+        }
+
+        function runValidation() {
+            if (!appendedData.length || !referenceData.length) {
+                return showStatus('validationStatus', 'Please upload both files first', 'error');
+            }
+
+            const appendedSiteCol = findSiteColumn(appendedHeaders);
+            const referenceSiteCol = findSiteColumn(referenceHeaders);
+
+            if (!appendedSiteCol || !referenceSiteCol) {
+                return showStatus('validationStatus', 'Could not find site acronym column in one or both files', 'error');
+            }
+
+            // Build reference lookup dictionary (case & space insensitive)
+            const referenceMap = {};
+            referenceData.forEach(row => {
+                const rawKey = row[referenceSiteCol] || '';
+                const key = rawKey.trim().toLowerCase();
+                if (key) referenceMap[key] = row;
+            });
+
+            const ignoredFields = getIgnoredFields();
+
+            const compareFields = [];
+            appendedHeaders.forEach(appHeader => {
+                const normalizedApp = normalizeFieldName(appHeader);
+                
+                if (ignoredFields.includes(normalizedApp) || normalizedApp === normalizeFieldName(appendedSiteCol)) {
+                    return;
+                }
+
+                const matchingRefHeader = referenceHeaders.find(refHeader => 
+                    normalizeFieldName(refHeader) === normalizedApp
+                );
+
+                if (matchingRefHeader) {
+                    compareFields.push({ appended: appHeader, reference: matchingRefHeader });
+                }
+            });
+
+            correctRecords = [];
+            incorrectRecords = [];
+            mismatchDetails = {};
+            let totalErrors = 0;
+            const errorsByField = {};
+
+            appendedData.forEach(appRow => {
+                const rawSite = appRow[appendedSiteCol] || '';
+                const siteKey = rawSite.trim().toLowerCase();
+                
+                if (!siteKey) {
+                    incorrectRecords.push({...appRow, _siteacronym: 'MISSING'});
+                    mismatchDetails['MISSING'] = ['NO_SITEACRONYM'];
+                    totalErrors++;
+                    return;
+                }
+
+                const refRow = referenceMap[siteKey];
+                if (!refRow) {
+                    incorrectRecords.push({...appRow, _siteacronym: rawSite});
+                    mismatchDetails[rawSite] = ['NOT_FOUND_IN_REFERENCE'];
+                    totalErrors++;
+                    return;
+                }
+
+                const mismatches = [];
+                compareFields.forEach(field => {
+                    const appVal = (appRow[field.appended] || '').trim();
+                    const refVal = (refRow[field.reference] || '').trim();
+                    
+                    if (appVal !== refVal) {
+                        mismatches.push(field.appended);
+                        totalErrors++;
+                        errorsByField[field.appended] = (errorsByField[field.appended] || 0) + 1;
+                    }
+                });
+
+                if (mismatches.length > 0) {
+                    incorrectRecords.push({...appRow, _siteacronym: rawSite});
+                    mismatchDetails[rawSite] = mismatches;
+                } else {
+                    correctRecords.push(appRow);
+                }
+            });
+
+            validationMetadata = {
+                timestamp: new Date().toISOString(),
+                totalRecords: appendedData.length,
+                correctRecords: correctRecords.length,
+                incorrectRecords: incorrectRecords.length,
+                fieldsChecked: compareFields.length,
+                fieldsIgnored: ignoredFields.length,
+                totalErrors: totalErrors,
+                errorsByField: errorsByField,
+                compareFields: compareFields.map(f => f.appended),
+                ignoredFieldsNormalized: ignoredFields
+            };
+
+            addToVersionHistory(validationMetadata);
+
+            displaySummary(compareFields.length, ignoredFields.length);
+            displayTable('correctTable', appendedHeaders, correctRecords, appendedSiteCol, mismatchDetails, true);
+            displayTable('incorrectTable', appendedHeaders, incorrectRecords, appendedSiteCol, mismatchDetails, true);
+
+            document.getElementById('resultSection').style.display = 'block';
+            showStatus('validationStatus', 'Validation complete!', 'success');
+        }
+
+        function displaySummary(fieldsCompared, fieldsIgnored) {
+            const total = appendedData.length;
+            const correct = correctRecords.length;
+            const incorrect = incorrectRecords.length;
+            const correctPct = total > 0 ? ((correct / total) * 100).toFixed(1) : 0;
+            const incorrectPct = total > 0 ? ((incorrect / total) * 100).toFixed(1) : 0;
+
+            const meta = validationMetadata;
+            const appendedSiteCol = findSiteColumn(appendedHeaders);
+
+            const comparedSet = new Set(meta.compareFields);
+            const ignoredNormalized = new Set(meta.ignoredFieldsNormalized || []);
+
+            function getIgnoreReason(header) {
+                const norm = normalizeFieldName(header);
+                if (norm === normalizeFieldName(appendedSiteCol)) {
+                    return 'Used as the join/lookup key — not a data field to compare';
+                }
+                if (ignoredNormalized.has(norm)) {
+                    const reasons = {
+                        'conid': 'Identifier field — unique per system, not meaningful to compare',
+                        'hycid': 'Identifier field — unique per system, not meaningful to compare',
+                        'firstname': 'PII field — excluded to protect personal data',
+                        'lastname': 'PII field — excluded to protect personal data',
+                        'emailaddress': 'PII field — excluded to protect personal data',
+                    };
+                    return reasons[norm] || 'Manually checked in "Fields to Ignore" settings';
+                }
+                return 'No matching column found in the reference sheet';
+            }
+
+            let comparedFieldsHTML = '';
+            meta.compareFields.forEach(field => {
+                const errCount = meta.errorsByField[field] || 0;
+                const errBadge = errCount > 0
+                    ? `<span class="error-count">⚠ ${errCount} error${errCount !== 1 ? 's' : ''}</span>`
+                    : `<span style="margin-left:auto;font-size:11px;color:#28a745;">✓ no errors</span>`;
+                comparedFieldsHTML += `
+                    <div class="field-tag compared-tag">
+                        <span class="field-name">${field}</span>
+                        <span class="field-reason">Compared against reference sheet</span>
+                        ${errBadge}
+                    </div>`;
+            });
+
+            let ignoredFieldsHTML = '';
+            appendedHeaders.forEach(header => {
+                if (comparedSet.has(header)) return;
+                const reason = getIgnoreReason(header);
+                ignoredFieldsHTML += `
+                    <div class="field-tag ignored-tag">
+                        <span class="field-name">${header}</span>
+                        <span class="field-reason">${reason}</span>
+                    </div>`;
+            });
+
+            const html = `
+                <h3>Validation Summary</h3>
+                <div class="summary-stats">
+                    <div class="stat-item">
+                        <div class="stat-label">Total Records</div>
+                        <div class="stat-value">${total}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Correct Records</div>
+                        <div class="stat-value success">${correct} (${correctPct}%)</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Incorrect Records</div>
+                        <div class="stat-value error">${incorrect} (${incorrectPct}%)</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Fields Compared</div>
+                        <div class="stat-value">${fieldsCompared}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Fields Ignored</div>
+                        <div class="stat-value">${fieldsIgnored}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Total Errors</div>
+                        <div class="stat-value error">${meta.totalErrors}</div>
+                    </div>
+                </div>
+
+                <div class="field-breakdown">
+                    <div class="field-panel compared">
+                        <h4>
+                            ✓ Fields Compared
+                            <span class="badge">${meta.compareFields.length} fields</span>
+                        </h4>
+                        <div class="field-list">
+                            ${comparedFieldsHTML || '<em style="color:#999;font-size:12px;">No fields compared.</em>'}
+                        </div>
+                    </div>
+                    <div class="field-panel ignored">
+                        <h4>
+                            ⊘ Fields Ignored
+                            <span class="badge">${appendedHeaders.length - meta.compareFields.length} fields</span>
+                        </h4>
+                        <div class="field-list">
+                            ${ignoredFieldsHTML || '<em style="color:#999;font-size:12px;">No fields ignored.</em>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('summaryBox').innerHTML = html;
+        }
+
+        function generateErrorLog() {
+            const meta = validationMetadata;
+            const timestamp = new Date(meta.timestamp).toLocaleString();
+            
+            let log = '═══════════════════════════════════════════════════════════════\n';
+            log += '                     VALIDATION ERROR LOG\n';
+            log += '═══════════════════════════════════════════════════════════════\n\n';
+            
+            log += `Timestamp: ${timestamp}\n\n`;
+            
+            log += '─────────────────────────────────────────────────────────────\n';
+            log += 'SUMMARY STATISTICS\n';
+            log += '─────────────────────────────────────────────────────────────\n';
+            log += `Total Records Processed:     ${meta.totalRecords}\n`;
+            log += `Correct Records:             ${meta.correctRecords} (${((meta.correctRecords/meta.totalRecords)*100).toFixed(1)}%)\n`;
+            log += `Incorrect Records:           ${meta.incorrectRecords} (${((meta.incorrectRecords/meta.totalRecords)*100).toFixed(1)}%)\n`;
+            log += `Fields Checked:              ${meta.fieldsChecked}\n`;
+            log += `Fields Ignored:              ${meta.fieldsIgnored}\n`;
+            log += `Total Errors Found:          ${meta.totalErrors}\n\n`;
+            
+            log += '─────────────────────────────────────────────────────────────\n';
+            log += 'FIELDS CHECKED\n';
+            log += '─────────────────────────────────────────────────────────────\n';
+            meta.compareFields.forEach((field, idx) => {
+                log += `${idx + 1}. ${field}\n`;
+            });
+            log += '\n';
+            
+            log += '─────────────────────────────────────────────────────────────\n';
+            log += 'ERRORS BY FIELD\n';
+            log += '─────────────────────────────────────────────────────────────\n';
+            const sortedFields = Object.entries(meta.errorsByField)
+                .sort((a, b) => b[1] - a[1]);
+            
+            if (sortedFields.length === 0) {
+                log += 'No field-level errors found.\n';
+            } else {
+                sortedFields.forEach(([field, count]) => {
+                    const pct = ((count / meta.totalRecords) * 100).toFixed(1);
+                    log += `${field.padEnd(30)} ${count.toString().padStart(5)} errors (${pct}%)\n`;
+                });
+            }
+            log += '\n';
+            
+            log += '─────────────────────────────────────────────────────────────\n';
+            log += 'DETAILED ERROR LIST\n';
+            log += '─────────────────────────────────────────────────────────────\n';
+            
+            if (incorrectRecords.length === 0) {
+                log += 'No errors found. All records match the reference!\n';
+            } else {
+                incorrectRecords.forEach((record, idx) => {
+                    const siteacronym = record._siteacronym || 'UNKNOWN';
+                    const mismatches = mismatchDetails[siteacronym] || [];
+                    
+                    log += `\nRecord ${idx + 1}:\n`;
+                    log += `  Site Acronym: ${siteacronym}\n`;
+                    log += `  Mismatched Fields (${mismatches.length}):\n`;
+                    mismatches.forEach(field => {
+                        log += `    - ${field}\n`;
+                    });
+                });
+            }
+            
+            log += '\n═══════════════════════════════════════════════════════════════\n';
+            log += '                         END OF LOG\n';
+            log += '═══════════════════════════════════════════════════════════════\n';
+            
+            return log;
+        }
+
+        function downloadErrorLog() {
+            const log = generateErrorLog();
+            const blob = new Blob([log], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            link.download = `error_log_${timestamp}.txt`;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function dataToCSV(headers, data) {
+            const csv = [
+                headers.join(','),
+                ...data.map(row => 
+                    headers.map(h => {
+                        const val = row[h] || '';
+                        return /[,"\n]/.test(val) ? `"${val.replace(/"/g, '""')}"` : val;
+                    }).join(',')
+                )
+            ].join('\n');
+            return csv;
+        }
+
+        function downloadCorrectRecords() {
+            if (!correctRecords.length) return alert('No correct records to download');
+            
+            const csv = dataToCSV(appendedHeaders, correctRecords);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'correct_records.csv';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadIncorrectRecords() {
+            if (!incorrectRecords.length) return alert('No incorrect records to download');
+            
+            const extendedHeaders = [...appendedHeaders, 'MISMATCHED_FIELDS'];
+            const siteCol = findSiteColumn(appendedHeaders);
+            
+            const extendedData = incorrectRecords.map(row => {
+                const siteacronym = row._siteacronym || row[siteCol];
+                const mismatches = mismatchDetails[siteacronym] || [];
+                return {
+                    ...row,
+                    'MISMATCHED_FIELDS': mismatches.join('; ')
+                };
+            });
+
+            const csv = dataToCSV(extendedHeaders, extendedData);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'incorrect_records.csv';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadBothExcel() {
+            if (!correctRecords.length && !incorrectRecords.length) {
+                return alert('No records to download');
+            }
+
+            const wb = XLSX.utils.book_new();
+
+            if (correctRecords.length > 0) {
+                const correctWS = XLSX.utils.json_to_sheet(correctRecords, { header: appendedHeaders });
+                XLSX.utils.book_append_sheet(wb, correctWS, 'Correct Records');
+            }
+
+            if (incorrectRecords.length > 0) {
+                const extendedHeaders = [...appendedHeaders, 'MISMATCHED_FIELDS'];
+                const siteCol = findSiteColumn(appendedHeaders);
+                
+                const extendedData = incorrectRecords.map(row => {
+                    const siteacronym = row._siteacronym || row[siteCol];
+                    const mismatches = mismatchDetails[siteacronym] || [];
+                    return {
+                        ...row,
+                        'MISMATCHED_FIELDS': mismatches.join('; ')
+                    };
+                });
+                const incorrectWS = XLSX.utils.json_to_sheet(extendedData, { header: extendedHeaders });
+                XLSX.utils.book_append_sheet(wb, incorrectWS, 'Incorrect Records');
+            }
+
+            XLSX.writeFile(wb, 'validation_results.xlsx');
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            displayVersionHistory();
+        });
+    </script>
+</body>
+</html>

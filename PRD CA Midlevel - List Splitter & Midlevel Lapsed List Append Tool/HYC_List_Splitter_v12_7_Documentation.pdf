@@ -1,0 +1,506 @@
+%PDF-1.3
+%ºß¬à
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 4 0 R
+>>
+endobj
+4 0 obj
+<<
+/Length 4933
+>>
+stream
+0.5670000000000001 w
+0 G
+BT
+/F2 16 Tf
+18.3999999999999986 TL
+0 g
+56.6929133858267775 785.1970866141732586 Td
+(HYC LIST SPLITTER TOOL - COMPLETE USER GUIDE) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+56.6929133858267775 768.1892125984252289 Td
+(Version 12.7 — Comprehensive Operating Handbook) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+56.6929133858267775 739.8427559055118081 Td
+(This tool is a completely self-contained file processor designed to take massive spreadsheets of donor data) Tj
+T* (and split them into localized 'Standard' or 'Mid-Level' campaign lists for individual marketing sites. It runs) Tj
+T* (entirely inside your web browser. No data ever leaves your computer or uploads to an external server.) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0 g
+56.6929133858267775 677.480551181102328 Td
+(1. UNDERSTANDING THE TWO MAIN PANELS) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+56.6929133858267775 660.4726771653542983 Td
+(The screen is divided into two separate, independent processing pipelines. Choose the panel that matches) Tj
+T* (your current campaign objective:) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+68.031496062992133 626.4569291338582389 Td
+(• BLUE PANEL \(Standard HYC\): Used for your active campaign audience files. By default, it looks for an ID) Tj
+T* (column named 'hyc id' and checks for duplicate rows. It does NOT modify or touch individual donor IDs) Tj
+T* (inside cells.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+68.031496062992133 575.4333070866141497 Td
+(• AMBER PANEL \(Lapsed HYC\): Used for historically lapsed campaign files. By default, it evaluates) Tj
+T* (duplicate rows based on their Email Address. It contains a specialized text scanner to strip out accidental) Tj
+T* (multiple 'con-#####' entries inside single spreadsheet cells.) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0 g
+56.6929133858267775 513.0711023622046696 Td
+(2. THE SETTINGS BOXES EXPLAINED \(WHAT TO TYPE\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+56.6929133858267775 496.0632283464566399 Td
+(At the top of each panel are text boxes. The tool checks what you type here against the column headers in) Tj
+T* (your file. If it cannot find an exact spelling, it tries smart fuzzy fallback options automatically:) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+68.031496062992133 462.0474803149605805 Td
+(• Site/Group Column: Tells the tool which column identifies the site location \(e.g., 'site_acronym'\). It uses) Tj
+T* (this to group your file.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+68.031496062992133 428.0317322834645211 Td
+(• Wealth Score Column: The column containing numbers used to rank donors \(e.g., 'top tier score'\). Higher) Tj
+T* (numbers win.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+68.031496062992133 394.0159842519684616 Td
+(• Email Column: The column holding donor email addresses used for verification sweeps.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+68.031496062992133 377.0081102362204319 Td
+(• Dedupe ID Column: The critical column used to spot duplicate rows. Standard files look at 'hyc id' by) Tj
+T* (default, while Lapsed files look at 'email address'.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+68.031496062992133 342.9923622047243725 Td
+(• Mid-Level Top %: The mathematically calculated percentage cutoff. If set to 10%, the top 10% highest) Tj
+T* (wealth scores in each site are split out into the Mid-Level category, while the lower 90% go to Standard.) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0 g
+56.6929133858267775 297.6380314960629221 Td
+(3. SPECIAL STEP: THE LAPSED MULTI-ID PREVIEW PANEL) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+56.6929133858267775 280.6301574803148924 Td
+(When you drop a spreadsheet into the Amber Lapsed Panel, the tool scans the 'Donor Record ID\(s\) WF') Tj
+T* (column instantly. If it finds single cells containing multiple packed entries like 'con-12345 con-67890', it) Tj
+T* (pauses and pops up a preview window:) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+68.031496062992133 229.6065354330708033 Td
+(• By default, all rows are checked, which means you allow the tool to drop the extra IDs and save only the) Tj
+T* (first 'con-#####' item.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+68.031496062992133 195.5907874015747439 Td
+(• If you uncheck a row, you tell the tool to REVERT and preserve the original, long messy string exactly as) Tj
+T* (it was loaded.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+68.031496062992133 161.5750393700786844 Td
+(• When you click 'Confirm', the tool remembers your choices, cleans the checked cells, and unlocks the big) Tj
+T* (process button.) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0 g
+56.6929133858267775 116.220708661417234 Td
+(4. STEP-BY-STEP OPERATION WALKTHROUGH) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+68.031496062992133 99.2128346456692043 Td
+(Step 1: Check your configuration text boxes to ensure they represent your file parameters.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+68.031496062992133 82.2049606299211746 Td
+(Step 2: Drag your Excel \(.xlsx\) or CSV \(.csv\) file and drop it directly onto the shaded box. Alternatively,) Tj
+T* (click 'Select File' to browse your computer.) Tj
+ET
+endstream
+endobj
+5 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 6 0 R
+>>
+endobj
+6 0 obj
+<<
+/Length 2618
+>>
+stream
+0.5670000000000001 w
+0 G
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+68.031496062992133 785.1970866141732586 Td
+(Step 3: Click the big 'Clean & Process' button. The system immediately scans your file for two serious) Tj
+T* (defects simultaneously:) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+79.3700787401574814 751.1813385826771992 Td
+(  A. Fake/Missing Emails: Any blank cell, broken syntax, or garbage placeholder string like 'none@',) Tj
+T* ('noreply@', or 'na@' is isolated.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+79.3700787401574814 717.1655905511811397 Td
+(  B. Row Duplicates: The system evaluates your Dedupe ID column. If an ID or Email appears multiple) Tj
+T* (times on separate rows, it groups them and checks their Wealth Score. The row with the highest score) Tj
+T* (is kept; secondary matching rows are flagged for removal.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+68.031496062992133 666.1419685039369369 Td
+(Step 4: Review the Cleaning Popup Window. Before anything is deleted, a grid displays every flagged bad) Tj
+T* (email and duplicate row. Uncheck a row to 'rescue' it back into your main dataset. Click 'Confirm &) Tj
+T* (Process'.) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0 g
+56.6929133858267775 603.7797637795274568 Td
+(5. EVALUATING RESULTS AND EXPORTING DATA) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+56.6929133858267775 586.7718897637794271 Td
+(Once processed, data charts generate at the bottom of the tool displaying total row balances:) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+68.031496062992133 569.7640157480313974 Td
+(• Optional: Dedupe by Email Button: Click this to perform a global email deduplication sweep across your) Tj
+T* (final compiled data. It protects category priorities \(Mid-Level wins over Standard\).) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+68.031496062992133 535.748267716535338 Td
+(• Full Segmented List Card: Saves your entire processed file as a single entity with a brand new column) Tj
+T* (titled 'hycsegment' labeling each row.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+68.031496062992133 501.7325196850393354 Td
+(• Individual Site Cards: Displays an alphabetical list of every individual site. Click 'Save' to export a clean) Tj
+T* (file containing ONLY that site's calculated Mid-Level cohort.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0 g
+68.031496062992133 467.716771653543276 Td
+(• Removed Logs & Backup Cards: Underneath the main downloads, individual logs are provided for) Tj
+T* (tracking everything deleted \(ID Duplicates, Fake Emails\). For Lapsed files, a specialized brown card titled) Tj
+T* ('Original Multi-ID Rows \(Pre-Cleaned\)' allows you to download a complete backup of those modified rows) Tj
+T* (in their original messy layout.) Tj
+ET
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R 5 0 R ]
+/Count 2
+>>
+endobj
+7 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+8 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+9 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+10 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+11 0 obj
+<<
+/Type /Font
+/BaseFont /Courier
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+12 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+13 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+14 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+15 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Roman
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+16 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+17 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Italic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+18 0 obj
+<<
+/Type /Font
+/BaseFont /Times-BoldItalic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+19 0 obj
+<<
+/Type /Font
+/BaseFont /ZapfDingbats
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+20 0 obj
+<<
+/Type /Font
+/BaseFont /Symbol
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 7 0 R
+/F2 8 0 R
+/F3 9 0 R
+/F4 10 0 R
+/F5 11 0 R
+/F6 12 0 R
+/F7 13 0 R
+/F8 14 0 R
+/F9 15 0 R
+/F10 16 0 R
+/F11 17 0 R
+/F12 18 0 R
+/F13 19 0 R
+/F14 20 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+21 0 obj
+<<
+/Producer (jsPDF 2.5.1)
+/CreationDate (D:20260710155604-04'00')
+>>
+endobj
+22 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/OpenAction [3 0 R /FitH null]
+/PageLayout /OneColumn
+>>
+endobj
+xref
+0 23
+0000000000 65535 f 
+0000007944 00000 n 
+0000009769 00000 n 
+0000000015 00000 n 
+0000000152 00000 n 
+0000005137 00000 n 
+0000005274 00000 n 
+0000008007 00000 n 
+0000008132 00000 n 
+0000008262 00000 n 
+0000008395 00000 n 
+0000008533 00000 n 
+0000008657 00000 n 
+0000008786 00000 n 
+0000008918 00000 n 
+0000009054 00000 n 
+0000009182 00000 n 
+0000009309 00000 n 
+0000009438 00000 n 
+0000009571 00000 n 
+0000009673 00000 n 
+0000010019 00000 n 
+0000010105 00000 n 
+trailer
+<<
+/Size 23
+/Root 22 0 R
+/Info 21 0 R
+/ID [ <BF5DB9F8F047F14B3845E1B8F9F7FE03> <BF5DB9F8F047F14B3845E1B8F9F7FE03> ]
+>>
+startxref
+10209
+%%EOF

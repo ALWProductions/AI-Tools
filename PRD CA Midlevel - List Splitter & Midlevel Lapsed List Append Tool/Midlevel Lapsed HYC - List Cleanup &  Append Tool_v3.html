@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HYC Midlevel Lapsed - Workflow v2</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root { --blue: #2563eb; --green: #059669; --slate: #334155; }
+        body { font-family: -apple-system, sans-serif; background: #f8fafc; padding: 20px; color: var(--slate); line-height: 1.6; }
+        .container { max-width: 1100px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 30px; }
+        .section { border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 20px; transition: all 0.3s ease; }
+        .active { border-color: var(--blue); background: #f0f7ff; border-width: 2px; }
+        .step-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
+        .badge { background: var(--blue); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; }
+        .btn { padding: 10px 20px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; font-size: 14px; transition: opacity 0.2s; }
+        .btn-blue { background: var(--blue); color: white; }
+        .btn-green { background: var(--green); color: white; }
+        .btn-log { background: #e2e8f0; color: var(--slate); font-size: 11px; margin-left: 10px; }
+        .table-wrap { overflow-x: auto; max-height: 300px; border: 1px solid #e2e8f0; margin-top: 15px; background: white; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th, td { padding: 8px; text-align: left; border: 1px solid #e2e8f0; white-space: nowrap; }
+        th { background: #f1f5f9; position: sticky; top: 0; color: #475569; font-weight: 700; }
+        .log-list { font-family: 'Courier New', monospace; font-size: 11px; color: #475569; background: #f1f5f9; padding: 10px; border-radius: 4px; margin-top: 10px; max-height: 120px; overflow-y: auto; border: 1px solid #cbd5e1; }
+        .highlight-col { background: #fffbeb; font-weight: 600; }
+        
+        /* Column Reordering UI */
+        .reorder-container { margin: 15px 0; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 15px; }
+        .reorder-title { font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .chip-list { display: flex; flex-wrap: wrap; gap: 8px; }
+        .column-chip { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; border-radius: 16px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: grab; user-select: none; transition: transform 0.15s ease, background-color 0.15s; }
+        .column-chip:hover { background: #bae6fd; }
+        .column-chip.dragging { opacity: 0.4; cursor: grabbing; }
+        .btn-reset { background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; padding: 4px 10px; font-size: 11px; border-radius: 4px; cursor: pointer; float: right; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+        <h1>HYC Midlevel Lapsed: Prep &amp; Append Workflow</h1>
+        <button class="btn btn-blue" onclick="generateUserGuide()">Download PDF Guide</button>
+    </div>
+
+    <!-- STEP 1 -->
+    <div id="section1" class="section active">
+        <div class="step-header">
+            <div style="display:flex; align-items:center;">
+                <span class="badge">1</span>
+                <h2>Upload &amp; Prep Client List</h2>
+            </div>
+            <button class="btn btn-log" onclick="downloadLog('prep')">Download Prep Log</button>
+        </div>
+        <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">Upload the HYC Midlevel Lapsed source file. The system will auto-detect Location Name, Constituent/Donor ID, and preserve other required columns.</p>
+        <input type="file" id="prepFile" accept=".csv,.xlsx,.xls">
+        <div id="prepLog" class="log-list">System ready...</div>
+        <div id="prepPreviewWrap" class="table-wrap" style="display:none;">
+            <table id="prepPreview"></table>
+        </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div id="section2" class="section">
+        <div class="step-header">
+            <div style="display:flex; align-items:center;">
+                <span class="badge">2</span>
+                <h2>Upload Append Data</h2>
+            </div>
+            <button class="btn btn-log" onclick="downloadLog('append')">Download Append Log</button>
+        </div>
+        <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">Upload the mapping file (requires 'siteacronym' or 'acronym' column).</p>
+        <input type="file" id="appendFile" accept=".csv,.xlsx,.xls" disabled>
+        <div id="appendLog" class="log-list">Waiting for Step 1...</div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div id="section3" class="section">
+        <div class="step-header">
+            <div style="display:flex; align-items:center;">
+                <span class="badge">3</span>
+                <h2>Final Review &amp; Export</h2>
+            </div>
+        </div>
+        <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">Review merged data, drag tags below to rearrange export column order, and save your output.</p>
+        
+        <!-- Column Reordering UI -->
+        <div id="reorderWrap" class="reorder-container" style="display:none;">
+            <div style="overflow: hidden; margin-bottom: 8px;">
+                <button class="btn-reset" onclick="resetColumnOrder()">Reset Default Order</button>
+                <div class="reorder-title">Drag &amp; Drop to Rearrange Export Columns:</div>
+            </div>
+            <div id="chipContainer" class="chip-list"></div>
+        </div>
+
+        <div style="display:flex; gap: 10px; margin-top: 15px;">
+            <button id="finalCsvBtn" class="btn btn-green" onclick="finalizeAndSave('csv')" disabled>Save as CSV</button>
+            <button id="finalXlsxBtn" class="btn btn-green" onclick="finalizeAndSave('xlsx')" disabled>Save as Excel (.xlsx)</button>
+        </div>
+        <div id="finalPreviewWrap" class="table-wrap" style="display:none;">
+            <table id="finalPreview"></table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let logs = { prep: [], append: [] };
+    let preppedData = [];
+    let appendData = [];
+    let originalLocationHeader = "";
+    let columnOrder = [];
+
+    function addLog(type, msg) {
+        const time = new Date().toLocaleTimeString();
+        logs[type].push(`[${time}] ${msg}`);
+        const logEl = document.getElementById(`${type}Log`);
+        logEl.innerHTML = logs[type].join('<br>');
+        logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function downloadLog(type) {
+        const blob = new Blob([logs[type].join('\n')], {type: 'text/plain'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `hyc_midlevel_lapsed_${type}_log.txt`;
+        a.click();
+    }
+
+    const parser = (file, callback) => {
+        const isCSV = file.name.toLowerCase().endsWith('.csv');
+        if (isCSV) {
+            Papa.parse(file, { header: true, skipEmptyLines: true, complete: (r) => callback(r.data) });
+        } else {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                callback(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]));
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    };
+
+    const getMatchingKey = (row, targets) => {
+        return Object.keys(row).find(k => targets.some(t => k.trim().toLowerCase() === t.toLowerCase()));
+    };
+
+    const getVal = (row, targets) => {
+        const key = getMatchingKey(row, Array.isArray(targets) ? targets : [targets]);
+        return key ? String(row[key]).trim() : "";
+    };
+
+    // --- STEP 1: PREP ---
+    document.getElementById('prepFile').addEventListener('change', function(e) {
+        parser(e.target.files[0], (data) => {
+            if (!data || !data.length) {
+                addLog('prep', 'ERROR: File is empty or failed to parse.');
+                return;
+            }
+
+            const locTargets = ['location name', 'location', 'siteacronym', 'acronym', 'CnsSoDIVPriAffinityAttribute_VALUE', 'CnsPSJHCnScores_COHORT'];
+            originalLocationHeader = getMatchingKey(data[0], locTargets);
+
+            addLog('prep', `Header detection: Location column identified as "${originalLocationHeader || 'Not Found'}"`);
+
+            preppedData = data.map((row, idx) => {
+                let rawLocation = originalLocationHeader ? String(row[originalLocationHeader] || '').trim() : "";
+                
+                let siteAcronym = rawLocation.replace(/^Campus Affinity\s*/gi, '').trim();
+                if (siteAcronym && !siteAcronym.toUpperCase().startsWith('CA-')) {
+                    siteAcronym = `CA-${siteAcronym}`;
+                }
+
+                if (!siteAcronym) {
+                    addLog('prep', `Row ${idx + 1}: Missing location/site data.`);
+                }
+
+                const preppedRow = { 'siteacronym': siteAcronym };
+
+                if (originalLocationHeader) {
+                    preppedRow[originalLocationHeader] = rawLocation;
+                }
+
+                preppedRow['Patient ID'] = getVal(row, ['patient id', 'patient_id', 'patientid']);
+                preppedRow['bbcrm-lookupid'] = getVal(row, ['bbcrm-lookupid', 'donor record id(s) wf', 'donor record id', 'con-id', 'constituent id', 'constituent-id', 'Cns_LOOKUPID']);
+                preppedRow['First Name'] = getVal(row, ['first name', 'first_name', 'firstname', 'Cns_FIRSTNAME']);
+                preppedRow['Last Name'] = getVal(row, ['last name', 'last_name', 'keyname', 'Cns_KEYNAME']);
+                preppedRow['Email'] = getVal(row, ['email', 'email address', 'CnsEmailAdrs_EMAILADDRESS']);
+                preppedRow['Model Score'] = getVal(row, ['model score', 'model_score', 'score']);
+                preppedRow['Series'] = getVal(row, ['series']);
+
+                return preppedRow;
+            });
+
+            addLog('prep', `Step 1 Complete: Processed ${preppedData.length} rows.`);
+            renderTable('prepPreview', preppedData.slice(0, 10));
+            document.getElementById('prepPreviewWrap').style.display = 'block';
+            document.getElementById('appendFile').disabled = false;
+            document.getElementById('section2').classList.add('active');
+            document.getElementById('section1').classList.remove('active');
+        });
+    });
+
+    // --- STEP 2: APPEND ---
+    document.getElementById('appendFile').addEventListener('change', function(e) {
+        parser(e.target.files[0], (data) => {
+            if (!data.length) return;
+            const header = Object.keys(data[0]);
+            const key = header.find(h => h.toLowerCase() === 'siteacronym' || h.toLowerCase() === 'acronym' || h.toLowerCase() === 'site' || h.toLowerCase() === 'location' || h.toLowerCase() === 'site-acronym' || h.toLowerCase() === 'site acronym' || h.toLowerCase() === 'site_acronym');
+            
+            if (!key) {
+                addLog('append', 'ERROR: No "siteacronym" or "acronym" column found in append file.');
+                return;
+            }
+
+            appendData = data;
+            const refMap = {};
+            data.forEach(r => refMap[String(r[key]).trim()] = r);
+
+            window.finalMerged = preppedData.map((mainRow, idx) => {
+                const match = refMap[mainRow.siteacronym] || {};
+                const merged = { ...mainRow, ...match };
+                
+                if (!match[key]) {
+                    addLog('append', `Row ${idx + 1} Match Failed: No reference mapping found for "${mainRow.siteacronym}"`);
+                }
+                
+                if (key !== 'siteacronym') delete merged[key];
+                return merged;
+            });
+
+            if (window.finalMerged.length > 0) {
+                columnOrder = Object.keys(window.finalMerged[0]).filter(k => k !== originalLocationHeader);
+            }
+
+            addLog('append', `Step 2 Complete: Successfully appended mapping for ${window.finalMerged.length} rows.`);
+            renderColumnReorderingUI();
+            updatePreviewTable();
+            document.getElementById('reorderWrap').style.display = 'block';
+            document.getElementById('finalPreviewWrap').style.display = 'block';
+            document.getElementById('finalCsvBtn').disabled = false;
+            document.getElementById('finalXlsxBtn').disabled = false;
+            document.getElementById('section3').classList.add('active');
+            document.getElementById('section2').classList.remove('active');
+        });
+    });
+
+    // --- REORDERING UI LOGIC ---
+    function renderColumnReorderingUI() {
+        const container = document.getElementById('chipContainer');
+        container.innerHTML = '';
+
+        columnOrder.forEach((col) => {
+            const chip = document.createElement('div');
+            chip.className = 'column-chip';
+            chip.draggable = true;
+            chip.innerText = col;
+            chip.dataset.col = col;
+
+            chip.addEventListener('dragstart', handleDragStart);
+            chip.addEventListener('dragover', handleDragOver);
+            chip.addEventListener('drop', handleDrop);
+            chip.addEventListener('dragend', handleDragEnd);
+
+            container.appendChild(chip);
+        });
+    }
+
+    let dragSrcEl = null;
+
+    function handleDragStart(e) {
+        dragSrcEl = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', this.dataset.col);
+    }
+
+    function handleDragOver(e) {
+        if (e.preventDefault) e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        return false;
+    }
+
+    function handleDrop(e) {
+        if (e.stopPropagation) e.stopPropagation();
+        if (dragSrcEl !== this) {
+            const srcCol = dragSrcEl.dataset.col;
+            const targetCol = this.dataset.col;
+
+            const srcIdx = columnOrder.indexOf(srcCol);
+            const targetIdx = columnOrder.indexOf(targetCol);
+
+            columnOrder.splice(srcIdx, 1);
+            columnOrder.splice(targetIdx, 0, srcCol);
+
+            renderColumnReorderingUI();
+            updatePreviewTable();
+            addLog('append', `Reordered columns: ${srcCol} moved before ${targetCol}`);
+        }
+        return false;
+    }
+
+    function handleDragEnd() {
+        this.classList.remove('dragging');
+    }
+
+    function resetColumnOrder() {
+        if (window.finalMerged.length > 0) {
+            columnOrder = Object.keys(window.finalMerged[0]).filter(k => k !== originalLocationHeader);
+            renderColumnReorderingUI();
+            updatePreviewTable();
+            addLog('append', 'Column order reset to default layout.');
+        }
+    }
+
+    function updatePreviewTable() {
+        const orderedMerged = getOrderedExportData();
+        renderTable('finalPreview', orderedMerged.slice(0, 10));
+    }
+
+    function getOrderedExportData() {
+        return window.finalMerged.map(row => {
+            const orderedRow = {};
+            columnOrder.forEach(col => {
+                orderedRow[col] = row[col] !== undefined ? row[col] : '';
+            });
+            return orderedRow;
+        });
+    }
+
+    // --- STEP 3: SAVE (CSV or EXCEL) ---
+    async function finalizeAndSave(format = 'csv') {
+        const cleanData = getOrderedExportData();
+        const filename = `HYC_Midlevel_Lapsed_Import.${format}`;
+
+        if (format === 'csv') {
+            const csvString = Papa.unparse(cleanData);
+            saveFileBlob(csvString, filename, 'text/csv', format);
+        } else {
+            const worksheet = XLSX.utils.json_to_sheet(cleanData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Lapsed Data");
+            const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+            saveFileBlob(excelBuffer, filename, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', format);
+        }
+    }
+
+    async function saveFileBlob(content, defaultFilename, mimeType, format) {
+        try {
+            if ('showSaveFilePicker' in window) {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: defaultFilename,
+                    types: [{
+                        description: `${format.toUpperCase()} File`,
+                        accept: { [mimeType]: [`.${format}`] }
+                    }]
+                });
+                const writable = await handle.createWritable();
+                await writable.write(content);
+                await writable.close();
+                addLog('append', `SUCCESS: Saved file as ${format.toUpperCase()} to target directory.`);
+            } else {
+                const blob = new Blob([content], { type: mimeType });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = defaultFilename;
+                a.click();
+                addLog('append', `SUCCESS: Downloaded ${format.toUpperCase()} file.`);
+            }
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                console.error("Save failed:", err);
+                addLog('append', `ERROR: Failed to save file.`);
+            }
+        }
+    }
+
+    function renderTable(id, data) {
+        const table = document.getElementById(id);
+        if (!data || !data.length) return;
+        const headers = Object.keys(data[0]);
+        let html = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+        data.forEach(row => {
+            html += '<tr>' + headers.map(h => `<td class="${h === originalLocationHeader ? 'highlight-col' : ''}">${row[h] || ''}</td>`).join('') + '</tr>';
+        });
+        table.innerHTML = html + '</tbody>';
+    }
+
+    // --- BEGINNER-FRIENDLY PDF USER GUIDE ---
+    function generateUserGuide() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        doc.setFontSize(16);
+        doc.text("Beginner Guide: HYC Midlevel Lapsed File Prep Tool", 10, 15);
+        
+        doc.setFontSize(9);
+        const textWidth = 180;
+        let yPosition = 25;
+
+        const sections = [
+            {
+                title: "1. WHAT IS THIS TOOL FOR?",
+                lines: [
+                    "This tool takes a raw list of lapsed donors and automatically cleans up column names,",
+                    "assigns standard site codes (e.g. CA-QVF), and combines it with additional data from a second file.",
+                    "It eliminates manual copy-pasting so your file is immediately ready for database upload."
+                ]
+            },
+            {
+                title: "2. HOW TO USE THIS TOOL (STEP-BY-STEP)",
+                lines: [
+                    "• STEP 1: Upload Your Main Donor File",
+                    "  1. Click the 'Choose File' button under Step 1.",
+                    "  2. Find and select your main donor file (ending in .csv or .xlsx) on your computer, then click Open.",
+                    "  3. The tool will standardise column names (like renaming donor IDs to 'bbcrm-lookupid') and create site codes.",
+                    "",
+                    "• STEP 2: Upload Your Mapping / Append File",
+                    "  1. Click the 'Choose File' button under Step 2.",
+                    "  2. Select your campaign matrix file.",
+                    "  3. The tool matches rows using site acronyms and attaches the necessary extra columns.",
+                    "",
+                    "• STEP 3 (Optional): Rearrange Export Columns",
+                    "  1. Under Step 3, you will see blue tags representing every column header.",
+                    "  2. Click and hold down your mouse button over any column tag.",
+                    "  3. Drag it left or right to change its order, then release the mouse button.",
+                    "  4. Click 'Reset Default Order' if you want to restore the original order.",
+                    "",
+                    "• STEP 4: Save Your Completed File",
+                    "  1. Click 'Save as CSV' or 'Save as Excel (.xlsx)' in Step 3.",
+                    "  2. Choose the folder on your computer where you want to save your file and click Save."
+                ]
+            },
+            {
+                title: "3. TROUBLESHOOTING & LOGS",
+                lines: [
+                    "• Grey text boxes display logs showing every action taken or if any rows failed to match.",
+                    "• Click 'Download Prep Log' or 'Download Append Log' if you need a text copy of these notes."
+                ]
+            }
+        ];
+
+        sections.forEach(sec => {
+            doc.setFont(undefined, 'bold');
+            doc.text(sec.title, 10, yPosition);
+            yPosition += 6;
+            
+            doc.setFont(undefined, 'normal');
+            sec.lines.forEach(line => {
+                const splitText = doc.splitTextToSize(line, textWidth);
+                doc.text(splitText, 10, yPosition);
+                yPosition += (splitText.length * 4.5);
+            });
+            yPosition += 4;
+        });
+
+        doc.save("HYC_Midlevel_Lapsed_Beginner_Guide.pdf");
+    }
+</script>
+</body>
+</html>

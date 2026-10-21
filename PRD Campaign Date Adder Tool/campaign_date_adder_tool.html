@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campaign Date Column Adder</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS for parsing and writing Excel/CSV files safely -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .drag-active { border-color: #000000; background-color: #f3f4f6; }
+        input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; filter: grayscale(100%); }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-4 sm:p-8">
+
+    <div class="w-full max-w-2xl mb-6">
+        <div class="bg-white border border-gray-300 shadow-sm rounded-lg p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Campaign Date Append Tool</h1>
+                <p class="text-gray-600 text-sm mt-1">Safely append a formatted date column to your lists.</p>
+            </div>
+            <button id="walkthroughBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded transition-colors text-sm border border-gray-400">
+                Download Walkthrough (.txt)
+            </button>
+        </div>
+    </div>
+
+    <main class="bg-white rounded-lg shadow-sm border border-gray-300 w-full max-w-2xl overflow-hidden">
+        
+        <div class="p-6 sm:p-8 space-y-8">
+            <!-- Status Notification Area -->
+            <div id="notification" class="hidden rounded p-4 text-sm font-medium transition-all duration-300 border"></div>
+
+            <!-- Step 1: Upload File -->
+            <section>
+                <h2 class="text-lg font-bold text-gray-900 mb-3 tracking-tight">
+                    Step 1: Upload List
+                </h2>
+                <div id="dropzone" class="border-2 border-dashed border-gray-300 rounded-lg p-10 text-center transition-colors hover:bg-gray-50 cursor-pointer relative">
+                    <input type="file" id="fileInput" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                    <div class="flex flex-col items-center gap-2 pointer-events-none">
+                        <div class="text-gray-900 font-semibold text-base">Drag and drop your file here</div>
+                        <div class="text-gray-500 text-sm">or click to browse your computer</div>
+                        <div class="text-gray-400 text-xs mt-2 uppercase tracking-wide">Supports .CSV, .XLS, .XLSX</div>
+                    </div>
+                </div>
+                <!-- Selected File Display -->
+                <div id="fileInfo" class="hidden mt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gray-50 p-4 rounded border border-gray-200">
+                    <div class="flex flex-col">
+                        <span class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Selected File</span>
+                        <span id="fileNameDisplay" class="font-medium text-gray-900 break-all">filename.csv</span>
+                    </div>
+                    <button type="button" id="removeFileBtn" class="text-sm text-gray-600 hover:text-black font-semibold uppercase tracking-wider py-1 px-3 border border-gray-300 rounded bg-white hover:bg-gray-100 transition-colors">
+                        Remove
+                    </button>
+                </div>
+            </section>
+
+            <!-- Step 2: Configuration -->
+            <section class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-gray-200">
+                <!-- Column Name Selection -->
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900 mb-3 tracking-tight">
+                        Step 2: Select Column
+                    </h2>
+                    <div class="relative">
+                        <select id="colSelect" class="w-full appearance-none bg-white border border-gray-400 text-gray-900 py-3 px-4 rounded focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-shadow cursor-pointer">
+                            <option value="" disabled selected>Choose a column name...</option>
+                            <option value="ndwdate">ndwdate</option>
+                            <option value="hycstandarddate">hycstandarddate</option>
+                            <option value="hyclapseddate">hyclapseddate</option>
+                            <option value="ncwdate">ncwdate</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-600 font-bold">
+                            ↓
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Date Selection -->
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900 mb-3 tracking-tight">
+                        Step 3: Select Date
+                    </h2>
+                    <input type="date" id="dateInput" class="w-full bg-white border border-gray-400 text-gray-900 py-3 px-4 rounded focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-shadow">
+                </div>
+            </section>
+
+            <!-- Step 3: Process & Export -->
+            <section class="pt-6 border-t border-gray-200">
+                <button id="processBtn" disabled class="w-full bg-black hover:bg-gray-800 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded shadow-sm transition-colors text-lg tracking-wide">
+                    Process & Download File
+                </button>
+                <p class="text-center text-gray-500 text-xs mt-4">
+                    Data is processed strictly within your browser and is never sent to any server.
+                </p>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
+            const dropzone = document.getElementById('dropzone');
+            const fileInput = document.getElementById('fileInput');
+            const fileInfo = document.getElementById('fileInfo');
+            const fileNameDisplay = document.getElementById('fileNameDisplay');
+            const removeFileBtn = document.getElementById('removeFileBtn');
+            const colSelect = document.getElementById('colSelect');
+            const dateInput = document.getElementById('dateInput');
+            const processBtn = document.getElementById('processBtn');
+            const notification = document.getElementById('notification');
+            const walkthroughBtn = document.getElementById('walkthroughBtn');
+
+            let currentFile = null;
+
+            // Walkthrough Download Functionality
+            walkthroughBtn.addEventListener('click', () => {
+                const walkthroughText = `Campaign Date Append Tool - Walkthrough
+
+WHAT IT DOES:
+This tool allows you to safely add a new column with a specific date to an existing CSV or Excel file. It runs entirely in your web browser, meaning your data never leaves your computer. It preserves all existing data and formatting exactly as it is, simply appending the new information to the end of each row.
+
+HOW IT WORKS:
+1. Upload List: Drag and drop your .csv, .xls, or .xlsx file into the upload box, or click the box to select a file from your computer.
+2. Select Column: Choose the desired column name from the dropdown menu (options include ndwdate, hycstandarddate, hyclapseddate, ncwdate).
+3. Select Date: Pick a date using the calendar input. The tool will format this date rigidly as MM/DD/YYYY.
+4. Process & Download: Click the large black process button at the bottom. 
+5. Result: The tool will read your file, add the selected column header to the end, fill the column with the chosen date for every existing row, and immediately prompt you to download the updated file.
+6. The downloaded file will have "_campaigndateadded" attached to its original filename so you don't overwrite your original file.`;
+
+                const blob = new Blob([walkthroughText], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'walkthrough.txt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+
+            const showNotification = (message, type = 'error') => {
+                notification.textContent = message;
+                notification.className = `p-4 rounded text-sm font-semibold mb-6 border ${
+                    type === 'error' ? 'bg-gray-100 text-gray-900 border-gray-400' : 'bg-gray-900 text-white border-black'
+                }`;
+                notification.classList.remove('hidden');
+                
+                // Auto hide after 5 seconds
+                setTimeout(() => {
+                    notification.classList.add('hidden');
+                }, 5000);
+            };
+
+            const validateFormState = () => {
+                if (currentFile && colSelect.value && dateInput.value) {
+                    processBtn.disabled = false;
+                } else {
+                    processBtn.disabled = true;
+                }
+            };
+
+            const handleFile = (file) => {
+                if (!file) return;
+                
+                const validTypes = ['.csv', '.xls', '.xlsx'];
+                const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+                
+                if (!validTypes.includes(fileExtension)) {
+                    showNotification('Please upload a valid .csv, .xls, or .xlsx file.');
+                    return;
+                }
+
+                currentFile = file;
+                fileNameDisplay.textContent = file.name;
+                dropzone.classList.add('hidden');
+                fileInfo.classList.remove('hidden');
+                validateFormState();
+            };
+
+            fileInput.addEventListener('change', (e) => {
+                handleFile(e.target.files[0]);
+            });
+
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropzone.classList.add('drag-active');
+            });
+
+            dropzone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('drag-active');
+            });
+
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('drag-active');
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files; 
+                    handleFile(e.dataTransfer.files[0]);
+                }
+            });
+
+            removeFileBtn.addEventListener('click', () => {
+                currentFile = null;
+                fileInput.value = '';
+                dropzone.classList.remove('hidden');
+                fileInfo.classList.add('hidden');
+                validateFormState();
+            });
+
+            colSelect.addEventListener('change', validateFormState);
+            dateInput.addEventListener('change', validateFormState);
+
+            processBtn.addEventListener('click', () => {
+                if (!currentFile || !colSelect.value || !dateInput.value) return;
+
+                // Set loading state
+                const originalBtnContent = processBtn.innerText;
+                processBtn.innerText = 'Processing...';
+                processBtn.disabled = true;
+
+                // Format the Date to MM/DD/YYYY strictly
+                const [year, month, day] = dateInput.value.split('-');
+                const formattedDate = `${month}/${day}/${year}`;
+                const newColName = colSelect.value;
+
+                // Read File
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        
+                        // Parse workbook. 
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        
+                        // Process the first sheet
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+
+                        if (!worksheet['!ref']) {
+                            throw new Error("The uploaded sheet appears to be empty.");
+                        }
+
+                        // Decode the range to find the bounds of the sheet
+                        const range = XLSX.utils.decode_range(worksheet['!ref']);
+                        
+                        // The new column will be placed right after the last column
+                        const newColIndex = range.e.c + 1;
+
+                        // Add the Column Header at row 0 (start row of the range)
+                        const headerCellAddress = XLSX.utils.encode_cell({r: range.s.r, c: newColIndex});
+                        worksheet[headerCellAddress] = { t: 's', v: newColName };
+
+                        // Add the formatted date to every subsequent row in that new column
+                        for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+                            const cellAddress = XLSX.utils.encode_cell({r: R, c: newColIndex});
+                            worksheet[cellAddress] = { t: 's', v: formattedDate };
+                        }
+
+                        // Update the worksheet's bounding box to include the new column
+                        range.e.c = newColIndex;
+                        worksheet['!ref'] = XLSX.utils.encode_range(range);
+
+                        // Construct new file name: originalName_campaigndateadded.ext
+                        const originalName = currentFile.name;
+                        const lastDotIndex = originalName.lastIndexOf('.');
+                        const baseName = originalName.substring(0, lastDotIndex);
+                        const extension = originalName.substring(lastDotIndex);
+                        
+                        const newFileName = `${baseName}_campaigndateadded${extension}`;
+
+                        // Trigger Download
+                        XLSX.writeFile(workbook, newFileName);
+
+                        // Show success message and reset UI
+                        showNotification(`Success! ${newFileName} has been downloaded.`, 'success');
+                        
+                    } catch (error) {
+                        console.error("Processing Error:", error);
+                        showNotification('An error occurred while processing the file. Please check the file format and try again.');
+                    } finally {
+                        // Restore button state
+                        processBtn.innerText = originalBtnContent;
+                        processBtn.disabled = false;
+                    }
+                };
+
+                reader.onerror = function() {
+                    showNotification('Error reading the file.');
+                    processBtn.innerText = originalBtnContent;
+                    processBtn.disabled = false;
+                };
+
+                // Read file as ArrayBuffer for SheetJS
+                reader.readAsArrayBuffer(currentFile);
+            });
+        });
+    </script>
+</body>
+</html>

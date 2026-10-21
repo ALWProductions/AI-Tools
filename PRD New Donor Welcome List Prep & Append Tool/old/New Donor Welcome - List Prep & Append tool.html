@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>South New Donor Welcome - Prep &amp; Append Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
+        .container { max-width: 1100px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 30px; }
+        h1 { color: #1a73e8; margin-bottom: 20px; font-size: 22px; border-bottom: 2px solid #e8eaed; padding-bottom: 10px; }
+        .step { margin-bottom: 25px; padding: 20px; background: #fff; border: 1px solid #dadce0; border-radius: 8px; }
+        .step h2 { font-size: 16px; margin-bottom: 15px; display: flex; align-items: center; }
+        .step h2 .badge { background: #1a73e8; color: white; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; margin-right: 10px; font-size: 12px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+        input[type="file"] { width: 100%; padding: 10px; background: #f8f9fa; border: 1px dashed #bdc1c6; border-radius: 4px; cursor: pointer; }
+        .status { margin-top: 10px; padding: 10px; border-radius: 4px; font-size: 13px; display: none; }
+        .status.success { background: #e6f4ea; color: #137333; border: 1px solid #ceead6; display: block; }
+        .status.error { background: #fce8e6; color: #c5221f; border: 1px solid #fad2cf; display: block; }
+        .btn { padding: 12px 24px; border: none; border-radius: 4px; background: #1a73e8; color: white; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn:hover { background: #1765cc; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .preview-area { margin-top: 15px; max-height: 200px; overflow: auto; border: 1px solid #eee; font-size: 11px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 6px; text-align: left; border: 1px solid #eee; }
+        th { background: #f8f9fa; position: sticky; top: 0; }
+        .mapping-card { background: #f1f3f4; padding: 10px; border-radius: 4px; font-size: 12px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>South New Donor Welcome: Emma Prep Tool</h1>
+
+    <div class="step">
+        <h2><span class="badge">1</span>Upload Client Donor List</h2>
+        <input type="file" id="mainFile" accept=".csv,.xlsx,.xls">
+        <div id="mainStatus" class="status"></div>
+        <div class="mapping-card">
+            <strong>Automatic Processing:</strong> Filters to 5 core fields, renames headers, and adds <code>siteacronym</code> (prefixed with "CA-").
+        </div>
+    </div>
+
+    <div class="step">
+        <h2><span class="badge">2</span>Upload Mapping/Append File</h2>
+        <p style="font-size: 13px; margin-bottom: 10px; color: #666;">This file must contain a <strong>siteacronym</strong> or <strong>acronym</strong> column to match against.</p>
+        <input type="file" id="appendFile" accept=".csv,.xlsx,.xls">
+        <div id="appendStatus" class="status"></div>
+    </div>
+
+    <div class="step" style="text-align: center;">
+        <h2><span class="badge">3</span>Finalize</h2>
+        <button class="btn" id="processBtn" onclick="processAndMerge()" disabled>Process & Merge Data</button>
+        <div id="mergeStatus" class="status"></div>
+    </div>
+
+    <div id="downloadSection" class="step" style="display: none; border: 2px solid #1a73e8;">
+        <h2><span class="badge">4</span>Ready for Emma</h2>
+        <button class="btn" onclick="downloadCSV()" style="background: #188038;">Download Merged_Emma_Import.csv</button>
+        <div class="preview-area" id="resultPreview"></div>
+    </div>
+</div>
+
+<script>
+    let rawMainData = [];
+    let processedMainData = [];
+    let appendData = [];
+    let appendHeaders = [];
+    let appendKey = '';
+
+    const REQUIRED_FIELDS = {
+        'Cns_LOOKUPID': 'BBCRM lookupID',
+        'Cns_FIRSTNAME': 'first_name',
+        'Cns_KEYNAME': 'last_name',
+        'CnsEmailAdrs_EMAILADDRESS': 'Email',
+        'CnsSoDIVPriAffinityAttribute_VALUE': 'CnsSoDIVPriAffinityAttribute_VALUE'
+    };
+
+    // File Parsing
+    function parseFile(file, callback) {
+        const name = file.name.toLowerCase();
+        if (name.endsWith('.csv')) {
+            Papa.parse(file, { header: true, skipEmptyLines: true, complete: r => callback(r.data) });
+        } else {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+                callback(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]));
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    }
+
+    // Step 1: Main List Processing
+    document.getElementById('mainFile').addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        parseFile(file, data => {
+            if (!data.length) return showStatus('mainStatus', 'File is empty', 'error');
+
+            // Map and Clean
+            processedMainData = data.map(row => {
+                let newRow = {};
+                // 1. Rename and Keep only specific fields
+                Object.keys(REQUIRED_FIELDS).forEach(oldKey => {
+                    const value = row[oldKey] ? String(row[oldKey]).trim() : '';
+                    newRow[REQUIRED_FIELDS[oldKey]] = value;
+                });
+
+                // 2. Create siteacronym with CA- prefix
+                const affinityVal = newRow['CnsSoDIVPriAffinityAttribute_VALUE'] || '';
+                newRow['siteacronym'] = affinityVal ? `CA-${affinityVal}` : '';
+                
+                return newRow;
+            });
+
+            // Reorder columns to put siteacronym before CnsSoDIVPriAffinityAttribute_VALUE
+            processedMainData = processedMainData.map(row => {
+                const { siteacronym, ...rest } = row;
+                return { siteacronym, ...rest };
+            });
+
+            showStatus('mainStatus', `Successfully prepped ${processedMainData.length} records.`, 'success');
+            checkReady();
+        });
+    });
+
+    // Step 2: Append File Processing
+    document.getElementById('appendFile').addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        parseFile(file, data => {
+            if (!data.length) return showStatus('appendStatus', 'File is empty', 'error');
+            
+            appendHeaders = Object.keys(data[0]);
+            appendKey = appendHeaders.find(h => h.toLowerCase() === 'siteacronym' || h.toLowerCase() === 'acronym');
+
+            if (!appendKey) {
+                return showStatus('appendStatus', 'Error: Append file must have a "siteacronym" column.', 'error');
+            }
+
+            appendData = data;
+            showStatus('appendStatus', `Loaded ${data.length} reference rows. Ready to match on "${appendKey}".`, 'success');
+            checkReady();
+        });
+    });
+
+    function checkReady() {
+        if (processedMainData.length && appendData.length) {
+            document.getElementById('processBtn').disabled = false;
+        }
+    }
+
+    // Step 3: VLOOKUP Logic
+    function processAndMerge() {
+        const appendMap = {};
+        appendData.forEach(row => {
+            const key = String(row[appendKey]).trim();
+            if (key) appendMap[key] = row;
+        });
+
+        const finalData = processedMainData.map(mainRow => {
+            const matchKey = mainRow['siteacronym'];
+            const matchData = appendMap[matchKey] || {};
+            
+            // Merge but don't duplicate the siteacronym column
+            const cleanMatchData = { ...matchData };
+            delete cleanMatchData[appendKey];
+
+            return { ...mainRow, ...cleanMatchData };
+        });
+
+        window.mergedResult = finalData;
+        renderPreview(finalData);
+        document.getElementById('downloadSection').style.display = 'block';
+        showStatus('mergeStatus', `Merge complete! Added data to ${finalData.length} rows.`, 'success');
+    }
+
+    function renderPreview(data) {
+        const headers = Object.keys(data[0]);
+        let html = '<table><thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+        data.slice(0, 5).forEach(row => {
+            html += '<tr>' + headers.map(h => `<td>${row[h] || ''}</td>`).join('') + '</tr>';
+        });
+        html += '</tbody></table>';
+        document.getElementById('resultPreview').innerHTML = html;
+    }
+
+    function downloadCSV() {
+        const csv = Papa.unparse(window.mergedResult);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute("download", "South_Donor_Welcome_Emma_Import.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function showStatus(id, msg, type) {
+        const el = document.getElementById(id);
+        el.textContent = msg;
+        el.className = 'status ' + type;
+    }
+</script>
+</body>
+</html>

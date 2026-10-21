@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HYC List Splitter Tool v4</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        :root {
+            --bg:           #f2f2f0;
+            --surface:      #ffffff;
+            --surface2:     #f7f7f5;
+            --border:       #ddddd8;
+            --border-dark:  #bbbbb5;
+            --text:         #1a1a1a;
+            --text-dim:     #666660;
+            --text-dimmer:  #99998f;
+            --accent-std:   #2563eb;
+            --accent-lapsed:#b45309;
+            --green:        #16a34a;
+            --red:          #dc2626;
+            --mono: 'IBM Plex Mono', monospace;
+            --sans: 'IBM Plex Sans', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* ─── HEADER ─────────────────────────────────── */
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 20px 36px;
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+        }
+        .header h1 {
+            font-family: var(--mono);
+            font-size: 1.05em;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .header-sub {
+            font-family: var(--mono);
+            font-size: 0.72em;
+            color: var(--text-dimmer);
+        }
+        .version-tag {
+            margin-left: auto;
+            font-family: var(--mono);
+            font-size: 0.68em;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            padding: 2px 8px;
+            color: var(--text-dimmer);
+        }
+
+        /* ─── TWO-PANEL WORKSPACE ────────────────────── */
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+        }
+
+        .panel {
+            background: var(--surface);
+            padding: 28px 32px;
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+        .panel:last-child { border-right: none; }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .panel-dot {
+            width: 9px; height: 9px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .panel-std .panel-dot    { background: var(--accent-std); }
+        .panel-lapsed .panel-dot { background: var(--accent-lapsed); }
+
+        .panel-title {
+            font-family: var(--mono);
+            font-size: 0.78em;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .panel-std .panel-title    { color: var(--accent-std); }
+        .panel-lapsed .panel-title { color: var(--accent-lapsed); }
+
+        .panel-badge {
+            margin-left: auto;
+            font-family: var(--mono);
+            font-size: 0.62em;
+            padding: 2px 7px;
+            border: 1px solid var(--border-dark);
+            color: var(--text-dimmer);
+            border-radius: 2px;
+        }
+
+        /* ─── CONFIG ─────────────────────────────────── */
+        .config-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .config-item label {
+            display: block;
+            font-family: var(--mono);
+            font-size: 0.62em;
+            color: var(--text-dimmer);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 3px;
+        }
+        .config-item input {
+            width: 100%;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 7px 9px;
+            font-family: var(--mono);
+            font-size: 0.78em;
+            outline: none;
+            transition: border-color 0.15s;
+            border-radius: 2px;
+        }
+        .config-item input:focus { border-color: var(--border-dark); }
+
+        /* ─── UPLOAD ─────────────────────────────────── */
+        .upload-area {
+            border: 1px dashed var(--border-dark);
+            padding: 24px 16px;
+            text-align: center;
+            background: var(--surface2);
+            transition: all 0.15s;
+            margin: 14px 0;
+            border-radius: 2px;
+        }
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--text-dim);
+            background: #efefec;
+        }
+        .upload-area.loaded { border-style: solid; }
+        .panel-std .upload-area.loaded    { border-color: var(--accent-std); }
+        .panel-lapsed .upload-area.loaded { border-color: var(--accent-lapsed); }
+
+        .upload-area input[type="file"] { display: none; }
+        .upload-text {
+            font-family: var(--mono);
+            font-size: 0.72em;
+            color: var(--text-dimmer);
+            margin-bottom: 8px;
+        }
+        .upload-btn {
+            display: inline-block;
+            padding: 6px 16px;
+            font-family: var(--mono);
+            font-size: 0.7em;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--border-dark);
+            color: var(--text);
+            background: var(--surface);
+            border-radius: 2px;
+            transition: all 0.15s;
+        }
+        .upload-btn:hover { background: var(--bg); }
+        .upload-filename {
+            font-family: var(--mono);
+            font-size: 0.72em;
+            margin-top: 7px;
+            font-weight: 600;
+        }
+        .panel-std .upload-filename    { color: var(--accent-std); }
+        .panel-lapsed .upload-filename { color: var(--accent-lapsed); }
+
+        /* ─── PROCESS BTN ────────────────────────────── */
+        .process-btn {
+            width: 100%;
+            padding: 11px;
+            font-family: var(--mono);
+            font-size: 0.76em;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s;
+            border-radius: 2px;
+            margin-bottom: 12px;
+        }
+        .process-btn:disabled {
+            background: var(--surface2);
+            border-color: var(--border);
+            color: var(--text-dimmer);
+            cursor: not-allowed;
+        }
+        .panel-std .process-btn:not(:disabled) {
+            background: var(--accent-std);
+            border-color: var(--accent-std);
+            color: #fff;
+        }
+        .panel-lapsed .process-btn:not(:disabled) {
+            background: var(--accent-lapsed);
+            border-color: var(--accent-lapsed);
+            color: #fff;
+        }
+        .process-btn:not(:disabled):hover { opacity: 0.88; }
+
+        /* ─── LOG ────────────────────────────────────── */
+        .log-container {
+            background: #1c1c1c;
+            border: 1px solid #333;
+            padding: 10px 12px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-family: var(--mono);
+            font-size: 0.68em;
+            border-radius: 2px;
+        }
+        .log-entry { padding: 1px 0; }
+        .log-entry.info    { color: #60a5fa; }
+        .log-entry.success { color: #4ade80; }
+        .log-entry.error   { color: #f87171; }
+        .log-entry.warn    { color: #fbbf24; }
+        .log-entry.dim     { color: #555; }
+
+        /* ─── RESULTS ────────────────────────────────── */
+        .results-outer {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 28px 32px;
+            display: none;
+        }
+        .results-title {
+            font-family: var(--mono);
+            font-size: 0.72em;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-dimmer);
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .stats-strip {
+            display: flex;
+            border: 1px solid var(--border);
+            margin-bottom: 22px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .stat-cell {
+            flex: 1;
+            padding: 12px 14px;
+            border-right: 1px solid var(--border);
+            text-align: center;
+            background: var(--surface2);
+        }
+        .stat-cell:last-child { border-right: none; }
+        .stat-num {
+            font-family: var(--mono);
+            font-size: 1.4em;
+            font-weight: 600;
+            display: block;
+            line-height: 1;
+            margin-bottom: 3px;
+            color: var(--text);
+        }
+        .stat-num.blue  { color: var(--accent-std); }
+        .stat-num.amber { color: var(--accent-lapsed); }
+        .stat-num.green { color: var(--green); }
+        .stat-num.red   { color: var(--red); }
+        .stat-lbl {
+            font-family: var(--mono);
+            font-size: 0.58em;
+            color: var(--text-dimmer);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .downloads-label {
+            font-family: var(--mono);
+            font-size: 0.65em;
+            color: var(--text-dimmer);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 10px;
+        }
+        .download-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+        .dl-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            padding: 12px 14px;
+            border-radius: 2px;
+        }
+        .dl-card.featured { border-color: var(--border-dark); background: var(--surface); }
+        .dl-name {
+            font-family: var(--mono);
+            font-size: 0.73em;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 2px;
+        }
+        .dl-count {
+            font-family: var(--mono);
+            font-size: 0.63em;
+            color: var(--text-dimmer);
+            margin-bottom: 9px;
+        }
+        .dl-row { display: flex; gap: 6px; }
+        .dl-select {
+            flex: 1;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 5px 7px;
+            font-family: var(--mono);
+            font-size: 0.66em;
+            outline: none;
+            border-radius: 2px;
+        }
+        .dl-btn {
+            padding: 5px 12px;
+            font-family: var(--mono);
+            font-size: 0.66em;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: opacity 0.15s;
+            white-space: nowrap;
+        }
+        .dl-btn:hover { opacity: 0.82; }
+        .std-results .dl-btn    { background: var(--accent-std);    color: #fff; }
+        .lapsed-results .dl-btn { background: var(--accent-lapsed); color: #fff; }
+
+        .section-divider {
+            font-family: var(--mono);
+            font-size: 0.63em;
+            color: var(--text-dimmer);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 10px 0 6px;
+            border-top: 1px solid var(--border);
+            margin: 2px 0 8px;
+        }
+
+        /* ─── MODAL ──────────────────────────────────── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border-dark);
+            max-width: 980px;
+            width: 100%;
+            max-height: 88vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 3px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+        }
+        .modal-header {
+            padding: 16px 22px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+            background: var(--surface2);
+        }
+        .modal-title {
+            font-family: var(--mono);
+            font-size: 0.82em;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .modal-subtitle {
+            font-family: var(--mono);
+            font-size: 0.65em;
+            color: var(--text-dimmer);
+        }
+        .modal-close {
+            margin-left: auto;
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            padding: 4px 10px;
+            font-family: var(--mono);
+            font-size: 0.7em;
+            cursor: pointer;
+            border-radius: 2px;
+        }
+        .modal-close:hover { border-color: var(--border-dark); }
+
+        .modal-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            background: var(--surface2);
+        }
+        .modal-tab {
+            padding: 9px 18px;
+            font-family: var(--mono);
+            font-size: 0.7em;
+            cursor: pointer;
+            border: none;
+            border-right: 1px solid var(--border);
+            border-bottom: 2px solid transparent;
+            color: var(--text-dimmer);
+            background: transparent;
+            transition: all 0.12s;
+        }
+        .modal-tab:hover { color: var(--text); }
+        .modal-tab.active { color: var(--text); border-bottom-color: var(--accent-std); background: var(--surface); }
+        .modal-tab .tab-count {
+            display: inline-block;
+            margin-left: 5px;
+            background: var(--border);
+            padding: 1px 5px;
+            border-radius: 2px;
+            font-size: 0.85em;
+        }
+        .modal-tab.has-items .tab-count { background: #fee2e2; color: var(--red); }
+
+        .modal-body { overflow-y: auto; flex: 1; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+
+        .preview-table-wrap { overflow-x: auto; }
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--mono);
+            font-size: 0.68em;
+        }
+        .preview-table th {
+            background: var(--surface2);
+            padding: 7px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-dimmer);
+            font-weight: 500;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+        }
+        .preview-table td {
+            padding: 6px 10px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-dim);
+            max-width: 190px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .preview-table tr:hover td { background: var(--surface2); }
+        .preview-table td.reason-cell { color: var(--red); white-space: normal; min-width: 160px; }
+        .preview-table td.keep-cell   { text-align: center; }
+        .keep-checkbox { width: 14px; height: 14px; cursor: pointer; accent-color: var(--green); }
+        .row-rescue td { background: #f0fdf4 !important; }
+
+        .empty-pane {
+            padding: 44px;
+            text-align: center;
+            font-family: var(--mono);
+            font-size: 0.74em;
+            color: var(--text-dimmer);
+        }
+
+        .modal-footer {
+            padding: 12px 22px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+            background: var(--surface2);
+        }
+        .modal-footer-info {
+            font-family: var(--mono);
+            font-size: 0.68em;
+            color: var(--text-dimmer);
+            flex: 1;
+        }
+        .modal-action-btn {
+            padding: 9px 20px;
+            font-family: var(--mono);
+            font-size: 0.74em;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: opacity 0.15s;
+        }
+        .modal-action-btn:hover { opacity: 0.85; }
+        .btn-confirm { background: var(--green);   color: #fff; }
+        .btn-cancel  { background: var(--surface); color: var(--text-dim); border: 1px solid var(--border-dark); }
+
+        .select-controls {
+            padding: 7px 10px;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 14px;
+            align-items: center;
+            font-family: var(--mono);
+            font-size: 0.66em;
+            color: var(--text-dimmer);
+        }
+        .select-link { color: var(--accent-std); cursor: pointer; text-decoration: underline; }
+
+        @media (max-width: 820px) {
+            .workspace { grid-template-columns: 1fr; }
+            .panel { border-right: none; }
+            .config-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>HYC List Splitter</h1>
+    <span class="header-sub">Standard &amp; Lapsed pipeline</span>
+    <span class="version-tag">v4.1</span>
+</div>
+
+<div class="workspace">
+
+    <!-- STANDARD HYC -->
+    <div class="panel panel-std" id="stdPanel">
+        <div class="panel-header">
+            <div class="panel-dot"></div>
+            <div class="panel-title">Standard HYC</div>
+            <span class="panel-badge">hycstandard / hycmidlevel</span>
+        </div>
+        <div class="config-row">
+            <div class="config-item">
+                <label>Site/Group Column</label>
+                <input type="text" id="std_siteCol" value="site_acronym">
+            </div>
+            <div class="config-item">
+                <label>Wealth Score Column</label>
+                <input type="text" id="std_scoreCol" value="top tier score">
+            </div>
+        </div>
+        <div class="config-row">
+            <div class="config-item">
+                <label>Email Column</label>
+                <input type="text" id="std_emailCol" value="email address">
+            </div>
+            <div class="config-item">
+                <label>Dedupe ID Column</label>
+                <input type="text" id="std_dedupeCol" value="hyc id">
+            </div>
+        </div>
+        <div class="config-row">
+            <div class="config-item">
+                <label>Mid-Level Top %</label>
+                <input type="number" id="std_percent" value="10" min="1" max="100">
+            </div>
+        </div>
+        <div class="upload-area" id="std_uploadArea">
+            <input type="file" id="std_fileInput" accept=".xlsx,.xls,.csv">
+            <div class="upload-text">Drop Excel or CSV here</div>
+            <label for="std_fileInput" class="upload-btn">Select File</label>
+            <div class="upload-filename" id="std_fileName"></div>
+        </div>
+        <button class="process-btn" id="std_processBtn" disabled>Clean &amp; Process Standard HYC</button>
+        <div class="log-container" id="std_log">
+            <div class="log-entry dim">[ready] Waiting for Standard HYC file...</div>
+        </div>
+    </div>
+
+    <!-- LAPSED HYC -->
+    <div class="panel panel-lapsed" id="lapsedPanel">
+        <div class="panel-header">
+            <div class="panel-dot"></div>
+            <div class="panel-title">Lapsed HYC</div>
+            <span class="panel-badge">lapsedstandard / lapsedmidlevel</span>
+        </div>
+        <div class="config-row">
+            <div class="config-item">
+                <label>Site/Group Column</label>
+                <input type="text" id="lapsed_siteCol" value="site_acronym">
+            </div>
+            <div class="config-item">
+                <label>Wealth Score Column</label>
+                <input type="text" id="lapsed_scoreCol" value="top tier score">
+            </div>
+        </div>
+        <div class="config-row">
+            <div class="config-item">
+                <label>Email Column</label>
+                <input type="text" id="lapsed_emailCol" value="email address">
+            </div>
+            <div class="config-item">
+                <label>Dedupe ID Column</label>
+                <input type="text" id="lapsed_dedupeCol" value="hyc id">
+            </div>
+        </div>
+        <div class="config-row">
+            <div class="config-item">
+                <label>Mid-Level Top %</label>
+                <input type="number" id="lapsed_percent" value="10" min="1" max="100">
+            </div>
+        </div>
+        <div class="upload-area" id="lapsed_uploadArea">
+            <input type="file" id="lapsed_fileInput" accept=".xlsx,.xls,.csv">
+            <div class="upload-text">Drop Excel or CSV here</div>
+            <label for="lapsed_fileInput" class="upload-btn">Select File</label>
+            <div class="upload-filename" id="lapsed_fileName"></div>
+        </div>
+        <button class="process-btn" id="lapsed_processBtn" disabled>Clean &amp; Process Lapsed HYC</button>
+        <div class="log-container" id="lapsed_log">
+            <div class="log-entry dim">[ready] Waiting for Lapsed HYC file...</div>
+        </div>
+    </div>
+</div>
+
+<div class="results-outer std-results"    id="std_results"></div>
+<div class="results-outer lapsed-results" id="lapsed_results"></div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="previewModal">
+    <div class="modal">
+        <div class="modal-header">
+            <div>
+                <div class="modal-title" id="modalTitle">Cleaning Preview</div>
+                <div class="modal-subtitle" id="modalSubtitle">Uncheck any row to rescue it back into the final list.</div>
+            </div>
+            <button class="modal-close" onclick="cancelPreview()">✕ Cancel</button>
+        </div>
+        <div class="modal-tabs" id="modalTabs"></div>
+        <div class="modal-body"  id="modalBody"></div>
+        <div class="modal-footer">
+            <div class="modal-footer-info" id="modalFooterInfo"></div>
+            <button class="modal-action-btn btn-cancel"  onclick="cancelPreview()">Cancel</button>
+            <button class="modal-action-btn btn-confirm" onclick="confirmCleaning()">✓ Confirm &amp; Process</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────
+const state = {
+    std:    { rawData: [], fileName: '' },
+    lapsed: { rawData: [], fileName: '' }
+};
+let pendingClean = null;
+const dlStore    = {};
+
+// ─── LOGGING ─────────────────────────────────────────────────
+function addLog(lt, msg, type = 'info') {
+    const el = document.getElementById(`${lt}_log`);
+    const d  = document.createElement('div');
+    d.className = `log-entry ${type}`;
+    const t = new Date().toLocaleTimeString('en-US', {hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    d.textContent = `[${t}] ${msg}`;
+    el.appendChild(d);
+    el.scrollTop = el.scrollHeight;
+}
+
+// ─── COLUMN RESOLVER (case/space/dash insensitive) ────────────
+// Given the user-typed column name and the actual headers array,
+// returns the EXACT matching header string, or null if not found.
+function resolveColumn(userInput, headers) {
+    if (!userInput) return null;
+    const norm = s => s.toLowerCase().replace(/[\s_\-]/g, '');
+    const target = norm(userInput);
+    return headers.find(h => norm(h) === target) || null;
+}
+
+// ─── FILE LOADING ─────────────────────────────────────────────
+function setupFileInput(lt) {
+    const input = document.getElementById(`${lt}_fileInput`);
+    const area  = document.getElementById(`${lt}_uploadArea`);
+    input.addEventListener('change', e => loadFile(e.target.files[0], lt));
+    area.addEventListener('dragover',  e => { e.preventDefault(); area.classList.add('dragover'); });
+    area.addEventListener('dragleave', () => area.classList.remove('dragover'));
+    area.addEventListener('drop', e => {
+        e.preventDefault(); area.classList.remove('dragover');
+        if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0], lt);
+    });
+}
+
+function loadFile(file, lt) {
+    if (!file) return;
+    document.getElementById(`${lt}_fileName`).textContent = `✓  ${file.name}`;
+    state[lt].fileName = file.name;
+    document.getElementById(`${lt}_uploadArea`).classList.add('loaded');
+    addLog(lt, `File selected: ${file.name}`, 'success');
+
+    const reader = new FileReader();
+    reader.onload = evt => {
+        try {
+            if (file.name.toLowerCase().endsWith('.csv')) {
+                // Use string decode for CSV so PapaParse can sniff encoding
+                const text = new TextDecoder().decode(new Uint8Array(evt.target.result));
+                const parsed = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: false });
+                state[lt].rawData = parsed.data;
+            } else {
+                const wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
+                state[lt].rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+            }
+            const cols = Object.keys(state[lt].rawData[0] || {});
+            addLog(lt, `Loaded ${state[lt].rawData.length} rows.`, 'success');
+            addLog(lt, `Columns: ${cols.join(' | ')}`, 'dim');
+            document.getElementById(`${lt}_processBtn`).disabled = false;
+        } catch(err) {
+            addLog(lt, `Error reading file: ${err.message}`, 'error');
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// ─── FAKE EMAIL DETECTION ─────────────────────────────────────
+const FAKE_PATTERNS = [
+    /noemail/i, /no_email/i, /no\.email/i, /noemailaddress/i,
+    /donotcontact/i, /donotuse/i, /invalid/i, /unknown@/i,
+    /notavailable/i, /\bna\b/i, /\bn\/a\b/i,
+    /fake/i, /test@test/i, /\bexample\.com$/i, /placeholder/i,
+    /^none@/i, /^null@/i, /^nobody@/i, /^noreply@/i,
+    /^x{2,}@/i, /^xxx/i, /@none\./i, /@noemail\./i,
+];
+const FAKE_DOMAINS = new Set([
+    'mailinator.com','guerrillamail.com','temp-mail.org','throwam.com',
+    'maildrop.cc','trashmail.com','yopmail.com','dispostable.com',
+    'sharklasers.com','spam4.me','trashmail.me','guerrillamailblock.com'
+]);
+
+function isFakeEmail(val) {
+    if (val === null || val === undefined) return true;
+    const v = String(val).trim();
+    if (v === '') return true;
+    // Must look like a real email address
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return true;
+    if (FAKE_PATTERNS.some(p => p.test(v))) return true;
+    const domain = v.split('@')[1]?.toLowerCase() || '';
+    return FAKE_DOMAINS.has(domain);
+}
+
+// ─── DEDUPLICATION ────────────────────────────────────────────
+function deduplicateByScore(rows, idCol, scoreCol) {
+    // idCol / scoreCol are already the RESOLVED (exact) header strings here
+    if (!idCol) return { kept: rows, removed: [] };
+    const seen    = new Map();
+    const removed = [];
+
+    rows.forEach(row => {
+        const id    = String(row[idCol] || '').trim();
+        if (!id) return; // blank ID → keep unconditionally
+        const score = parseFloat(row[scoreCol]) || 0;
+        if (!seen.has(id)) {
+            seen.set(id, { row, score });
+        } else if (score > seen.get(id).score) {
+            removed.push({ ...seen.get(id).row, _removeReason: `Duplicate ID "${id}" — lower score (${seen.get(id).score}) replaced by score ${score}` });
+            seen.set(id, { row, score });
+        } else {
+            removed.push({ ...row, _removeReason: `Duplicate ID "${id}" — lower score (${score}); keeping score ${seen.get(id).score}` });
+        }
+    });
+
+    return { kept: [...seen.values()].map(v => v.row), removed };
+}
+
+// ─── MAIN PROCESS ─────────────────────────────────────────────
+function triggerProcess(lt) {
+    const rows = state[lt].rawData;
+    if (!rows.length) return addLog(lt, 'No data loaded.', 'error');
+
+    const headers = Object.keys(rows[0]);
+
+    // Resolve all column names against actual headers
+    const siteColRaw   = document.getElementById(`${lt}_siteCol`).value.trim();
+    const scoreColRaw  = document.getElementById(`${lt}_scoreCol`).value.trim();
+    const emailColRaw  = document.getElementById(`${lt}_emailCol`).value.trim();
+    const dedupeColRaw = document.getElementById(`${lt}_dedupeCol`).value.trim();
+    const percent      = parseInt(document.getElementById(`${lt}_percent`).value) || 10;
+
+    const siteCol   = resolveColumn(siteColRaw,   headers);
+    const scoreCol  = resolveColumn(scoreColRaw,  headers);
+    const emailCol  = resolveColumn(emailColRaw,  headers);
+    const dedupeCol = resolveColumn(dedupeColRaw, headers);
+
+    if (!siteCol) {
+        addLog(lt, `Site column "${siteColRaw}" not found. Available: ${headers.join(', ')}`, 'error');
+        return;
+    }
+    addLog(lt, `Resolved columns — site: "${siteCol}" | score: "${scoreCol||'not found'}" | email: "${emailCol||'not found (skipping email check)'}" | dedupe: "${dedupeCol||'not found (skipping dedupe)'}"`, 'dim');
+    addLog(lt, `Starting cleaning pipeline…`, 'info');
+
+    // ── Step 1: Email filter ──
+    const fakeEmailRows = [];
+    let afterEmailFilter;
+
+    if (!emailCol) {
+        addLog(lt, `Email column "${emailColRaw}" not found — email check skipped.`, 'warn');
+        afterEmailFilter = rows;
+    } else {
+        afterEmailFilter = rows.filter(row => {
+            const val = row[emailCol];
+            if (isFakeEmail(val)) {
+                fakeEmailRows.push({ ...row, _removeReason: `Fake/missing email: "${String(val ?? '(blank)')}"` });
+                return false;
+            }
+            return true;
+        });
+        addLog(lt, `Email filter: ${fakeEmailRows.length} rows flagged.`, fakeEmailRows.length ? 'warn' : 'success');
+    }
+
+    // ── Step 2: Dedupe ──
+    const { kept: afterDedupe, removed: dupeRows } = deduplicateByScore(afterEmailFilter, dedupeCol, scoreCol);
+    addLog(lt, `Dedupe: ${dupeRows.length} duplicate rows flagged.`, dupeRows.length ? 'warn' : 'success');
+
+    const totalFlagged = fakeEmailRows.length + dupeRows.length;
+
+    if (totalFlagged === 0) {
+        addLog(lt, 'No rows to remove. Proceeding to segmentation.', 'success');
+        runSegmentation(lt, afterDedupe, siteCol, scoreCol, percent);
+        return;
+    }
+
+    addLog(lt, `${totalFlagged} rows flagged. Opening preview…`, 'warn');
+    openPreviewModal(lt, fakeEmailRows, dupeRows, afterDedupe, siteCol, scoreCol, percent);
+}
+
+// ─── PREVIEW MODAL ────────────────────────────────────────────
+function openPreviewModal(lt, fakeRows, dupeRows, cleanData, siteCol, scoreCol, percent) {
+    pendingClean = { lt, fakeRows, dupeRows, cleanData, siteCol, scoreCol, percent };
+    document.getElementById('modalTitle').textContent =
+        `Cleaning Preview — ${lt === 'std' ? 'Standard' : 'Lapsed'} HYC`;
+    buildModalTabs(fakeRows, dupeRows);
+    updateModalFooter();
+    document.getElementById('previewModal').classList.add('active');
+}
+
+function buildModalTabs(fakeRows, dupeRows) {
+    const tabBar = document.getElementById('modalTabs');
+    const body   = document.getElementById('modalBody');
+    tabBar.innerHTML = '';
+    body.innerHTML   = '';
+
+    [
+        { id: 'tab_fake', label: 'Fake / Missing Email', rows: fakeRows },
+        { id: 'tab_dupe', label: 'Duplicates',           rows: dupeRows },
+    ].forEach((tab, i) => {
+        const btn = document.createElement('button');
+        btn.className = `modal-tab${i===0?' active':''}${tab.rows.length?' has-items':''}`;
+        btn.dataset.tabId = tab.id;
+        btn.innerHTML = `${tab.label} <span class="tab-count">${tab.rows.length}</span>`;
+        btn.onclick = () => switchTab(tab.id);
+        tabBar.appendChild(btn);
+
+        const pane = document.createElement('div');
+        pane.className = `tab-pane${i===0?' active':''}`;
+        pane.id = tab.id;
+        pane.appendChild(buildTabContent(tab.rows, tab.id));
+        body.appendChild(pane);
+    });
+}
+
+function buildTabContent(rows, tabId) {
+    if (!rows.length) {
+        const el = document.createElement('div');
+        el.className = 'empty-pane';
+        el.textContent = '✓  No records flagged in this category.';
+        return el;
+    }
+    const wrap = document.createElement('div');
+    const ctrl = document.createElement('div');
+    ctrl.className = 'select-controls';
+    ctrl.innerHTML = `<span>Flagged rows — uncheck any row to rescue it:</span>
+        <span class="select-link" onclick="setAllChecked('${tabId}',true)">Check all</span>
+        <span class="select-link" onclick="setAllChecked('${tabId}',false)">Uncheck all</span>`;
+    wrap.appendChild(ctrl);
+
+    const tw = document.createElement('div');
+    tw.className = 'preview-table-wrap';
+    const sampleCols = Object.keys(rows[0]).filter(k => !k.startsWith('_')).slice(0, 8);
+
+    let html = `<table class="preview-table"><thead><tr>
+        <th>Remove?</th><th>Reason</th>
+        ${sampleCols.map(c => `<th>${c}</th>`).join('')}
+    </tr></thead><tbody>`;
+
+    rows.forEach((row, idx) => {
+        const rowId = `${tabId}_row_${idx}`;
+        html += `<tr id="tr_${rowId}">
+            <td class="keep-cell">
+                <input type="checkbox" class="keep-checkbox" id="${rowId}" checked
+                    onchange="toggleRow('${rowId}',this.checked)">
+            </td>
+            <td class="reason-cell">${row._removeReason||''}</td>
+            ${sampleCols.map(c=>`<td title="${String(row[c]||'')}">${trunc(String(row[c]||''),24)}</td>`).join('')}
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    tw.innerHTML = html;
+    wrap.appendChild(tw);
+    return wrap;
+}
+
+function trunc(s, n) { return s.length > n ? s.slice(0,n)+'…' : s; }
+
+function switchTab(id) {
+    document.querySelectorAll('.modal-tab').forEach(b => b.classList.toggle('active', b.dataset.tabId===id));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id===id));
+}
+
+function toggleRow(rowId, checked) {
+    document.getElementById(`tr_${rowId}`).classList.toggle('row-rescue', !checked);
+    updateModalFooter();
+}
+
+function setAllChecked(tabId, checked) {
+    document.querySelectorAll(`#${tabId} .keep-checkbox`).forEach(cb => {
+        cb.checked = checked;
+        document.getElementById(`tr_${cb.id}`).classList.toggle('row-rescue', !checked);
+    });
+    updateModalFooter();
+}
+
+function updateModalFooter() {
+    const all  = document.querySelectorAll('#modalBody .keep-checkbox').length;
+    const rem  = document.querySelectorAll('#modalBody .keep-checkbox:checked').length;
+    document.getElementById('modalFooterInfo').textContent =
+        `${all} flagged — ${rem} will be removed, ${all-rem} rescued (kept).`;
+}
+
+function cancelPreview() {
+    document.getElementById('previewModal').classList.remove('active');
+    if (pendingClean) addLog(pendingClean.lt, 'Preview cancelled. No changes made.', 'warn');
+    pendingClean = null;
+}
+
+function confirmCleaning() {
+    if (!pendingClean) return;
+    const { lt, fakeRows, dupeRows, cleanData, siteCol, scoreCol, percent } = pendingClean;
+
+    const rescuedFake = getRescued('tab_fake', fakeRows);
+    const rescuedDupe = getRescued('tab_dupe', dupeRows);
+
+    addLog(lt, `Removing ${fakeRows.length-rescuedFake.length} fake-email rows (${rescuedFake.length} rescued).`, 'info');
+    addLog(lt, `Removing ${dupeRows.length-rescuedDupe.length} duplicate rows (${rescuedDupe.length} rescued).`, 'info');
+
+    const final = [...cleanData, ...rescuedFake, ...rescuedDupe].map(r => {
+        const c = {...r}; delete c._removeReason; return c;
+    });
+
+    document.getElementById('previewModal').classList.remove('active');
+    pendingClean = null;
+    addLog(lt, `${final.length} rows after cleaning. Running segmentation…`, 'success');
+    runSegmentation(lt, final, siteCol, scoreCol, percent);
+}
+
+function getRescued(tabId, originalRows) {
+    const rescued = [];
+    document.querySelectorAll(`#${tabId} .keep-checkbox`).forEach((cb, idx) => {
+        if (!cb.checked && originalRows[idx]) rescued.push(originalRows[idx]);
+    });
+    return rescued;
+}
+
+// ─── SEGMENTATION ─────────────────────────────────────────────
+function runSegmentation(lt, data, siteCol, scoreCol, percent) {
+    const isLapsed = lt === 'lapsed';
+    const midLabel = isLapsed ? 'lapsedmidlevel' : 'hycmidlevel';
+    const stdLabel = isLapsed ? 'lapsedstandard' : 'hycstandard';
+
+    const groups = {};
+    data.forEach(row => {
+        const site = String(row[siteCol]||'Uncategorized').trim();
+        if (!groups[site]) groups[site] = [];
+        groups[site].push(row);
+    });
+    addLog(lt, `${Object.keys(groups).length} site groups found.`, 'success');
+
+    const combined = [];
+    const bySite   = {};
+
+    Object.keys(groups).forEach(site => {
+        const sr = groups[site];
+        sr.sort((a,b) => (parseFloat(b[scoreCol])||0) - (parseFloat(a[scoreCol])||0));
+        const split = Math.ceil(sr.length * (percent/100));
+        sr.forEach((row,i) => {
+            const tagged = { ...row, hycsegment: i < split ? midLabel : stdLabel };
+            combined.push(tagged);
+            if (i < split) { if (!bySite[site]) bySite[site]=[]; bySite[site].push(tagged); }
+        });
+        addLog(lt, `${site}: ${split} ${midLabel}, ${sr.length-split} ${stdLabel}.`, 'info');
+    });
+
+    addLog(lt, `Segmentation complete. ${combined.length} records tagged.`, 'success');
+    displayResults(lt, combined, bySite, data.length);
+}
+
+// ─── RESULTS DISPLAY ─────────────────────────────────────────
+function displayResults(lt, combined, bySite, inputCount) {
+    const isLapsed = lt === 'lapsed';
+    const midLabel = isLapsed ? 'lapsedmidlevel' : 'hycmidlevel';
+    const stdLabel = isLapsed ? 'lapsedstandard' : 'hycstandard';
+    const numCls   = isLapsed ? 'amber' : 'blue';
+    const midRows  = combined.filter(r => r.hycsegment === midLabel);
+    const stdRows  = combined.filter(r => r.hycsegment === stdLabel);
+    const removed  = inputCount - combined.length;
+
+    const container = document.getElementById(`${lt}_results`);
+    container.style.display = 'block';
+    container.innerHTML = `
+        <div class="results-title">${isLapsed ? 'Lapsed' : 'Standard'} HYC — Results</div>
+        <div class="stats-strip">
+            <div class="stat-cell"><span class="stat-num">${inputCount}</span><span class="stat-lbl">Input Rows</span></div>
+            <div class="stat-cell"><span class="stat-num red">${removed}</span><span class="stat-lbl">Removed</span></div>
+            <div class="stat-cell"><span class="stat-num ${numCls}">${combined.length}</span><span class="stat-lbl">Final Records</span></div>
+            <div class="stat-cell"><span class="stat-num green">${midRows.length}</span><span class="stat-lbl">${midLabel}</span></div>
+            <div class="stat-cell"><span class="stat-num">${stdRows.length}</span><span class="stat-lbl">${stdLabel}</span></div>
+            <div class="stat-cell"><span class="stat-num">${Object.keys(bySite).length}</span><span class="stat-lbl">Sites</span></div>
+        </div>
+        <div class="downloads-label">Downloads</div>
+        <div class="download-grid" id="${lt}_dlGrid"></div>
+    `;
+
+    const grid = document.getElementById(`${lt}_dlGrid`);
+    const masterKey = `${lt}_combined`;
+    dlStore[masterKey] = combined;
+    addDlCard(grid, `${isLapsed?'Lapsed':'Standard'} HYC — Full Segmented List`, combined.length, masterKey, true, lt);
+
+    const div = document.createElement('div');
+    div.style.gridColumn = '1/-1';
+    div.className = 'section-divider';
+    div.textContent = 'Individual Site Mid-Level Files (spot-check)';
+    grid.appendChild(div);
+
+    Object.keys(bySite).sort().forEach(site => {
+        const key = `${lt}_site_${site.replace(/[^a-z0-9]/gi,'_')}`;
+        dlStore[key] = bySite[site];
+        addDlCard(grid, site, bySite[site].length, key, false, lt);
+    });
+}
+
+function addDlCard(container, name, count, key, featured, lt) {
+    const card = document.createElement('div');
+    card.className = `dl-card${featured?' featured':''}`;
+    const fmtId = `fmt_${key}`;
+    card.innerHTML = `
+        <div class="dl-name">${name}</div>
+        <div class="dl-count">${count} records</div>
+        <div class="dl-row">
+            <select class="dl-select" id="${fmtId}">
+                <option value="csv">CSV (.csv)</option>
+                <option value="xlsx">Excel (.xlsx)</option>
+            </select>
+            <button class="dl-btn" onclick="triggerDownload('${key}','${name.replace(/'/g,"\\'")}','${fmtId}')">↓ Save</button>
+        </div>`;
+    container.appendChild(card);
+}
+
+// ─── DOWNLOAD ─────────────────────────────────────────────────
+async function triggerDownload(key, name, fmtId) {
+    const data      = dlStore[key];
+    const format    = document.getElementById(fmtId).value;
+    const suggested = `${name.toLowerCase().replace(/[^a-z0-9]+/g,'_')}.${format}`;
+    const lt        = key.startsWith('lapsed') ? 'lapsed' : 'std';
+
+    try {
+        if (window.showSaveFilePicker) {
+            const handle = await window.showSaveFilePicker({
+                suggestedName: suggested,
+                types:[{ description: format==='csv'?'CSV File':'Excel File',
+                    accept: format==='csv'
+                        ? {'text/csv':['.csv']}
+                        : {'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']} }]
+            });
+            const w = await handle.createWritable();
+            if (format==='csv') {
+                await w.write(Papa.unparse(data));
+            } else {
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Data');
+                await w.write(XLSX.write(wb,{bookType:'xlsx',type:'array'}));
+            }
+            await w.close();
+            addLog(lt, `Saved: ${suggested}`, 'success');
+        } else {
+            if (format==='csv') {
+                const blob = new Blob([Papa.unparse(data)],{type:'text/csv'});
+                const a = Object.assign(document.createElement('a'), {href:URL.createObjectURL(blob), download:suggested});
+                a.click(); URL.revokeObjectURL(a.href);
+            } else {
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Data');
+                XLSX.writeFile(wb, suggested);
+            }
+            addLog(lt, `Downloaded: ${suggested}`, 'info');
+        }
+    } catch(err) {
+        if (err.name !== 'AbortError') addLog(lt, `Save error: ${err.message}`, 'error');
+    }
+}
+
+// ─── INIT ─────────────────────────────────────────────────────
+setupFileInput('std');
+setupFileInput('lapsed');
+document.getElementById('std_processBtn').addEventListener('click',    () => triggerProcess('std'));
+document.getElementById('lapsed_processBtn').addEventListener('click', () => triggerProcess('lapsed'));
+</script>
+</body>
+</html>

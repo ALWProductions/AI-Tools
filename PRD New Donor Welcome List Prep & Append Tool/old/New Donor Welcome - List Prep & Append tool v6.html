@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>South New Donor Welcome - Prep & Append v4</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f1f5f9; padding: 20px; color: #334155; line-height: 1.5; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); padding: 30px; }
+        h1 { color: #0f172a; font-size: 22px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+        .section { margin-bottom: 25px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; }
+        .section h2 { font-size: 16px; margin-bottom: 15px; color: #1e293b; display: flex; align-items: center; }
+        .step-num { background: #3b82f6; color: white; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-right: 10px; font-size: 12px; }
+        input[type="file"] { width: 100%; padding: 10px; border: 2px dashed #cbd5e1; border-radius: 6px; cursor: pointer; background: #f8fafc; }
+        .btn { padding: 12px 24px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s; font-size: 14px; }
+        .btn:hover { background: #1d4ed8; }
+        .btn:disabled { background: #94a3b8; cursor: not-allowed; }
+        .status { margin-top: 10px; padding: 10px; border-radius: 6px; font-size: 13px; display: none; }
+        .status.success { background: #dcfce7; color: #166534; display: block; }
+        .status.error { background: #fee2e2; color: #991b1b; display: block; }
+        .table-wrap { overflow-x: auto; margin-top: 15px; max-height: 200px; border: 1px solid #e2e8f0; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th, td { padding: 8px; text-align: left; border: 1px solid #e2e8f0; white-space: nowrap; }
+        th { background: #f8fafc; position: sticky; top: 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>South New Donor Welcome: Prep & Append</h1>
+
+    <div class="section">
+        <h2><span class="step-num">1</span>Upload Client List (Prep)</h2>
+        <input type="file" id="prepInput" accept=".csv,.xlsx,.xls">
+        <div id="prepStatus" class="status"></div>
+        <div class="table-wrap" id="prepPreviewWrap" style="display:none;">
+            <table id="prepPreview"></table>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2><span class="step-num">2</span>Upload Data Append File</h2>
+        <p style="font-size: 12px; color: #64748b; margin-bottom: 10px;">Must contain a "siteacronym" column to match.</p>
+        <input type="file" id="appendInput" accept=".csv,.xlsx,.xls">
+        <div id="appendStatus" class="status"></div>
+    </div>
+
+    <div class="section" style="text-align: center; background: #f8fafc;">
+        <button id="mergeBtn" class="btn" onclick="executeMerge()" disabled>Merge & Finalize</button>
+        <div id="finalStatus" class="status"></div>
+        
+        <div id="downloadArea" style="display:none; margin-top: 20px;">
+            <button class="btn" style="background: #059669;" onclick="downloadCSV()">Download Final Emma Import</button>
+            <div class="table-wrap">
+                <table id="finalPreview"></table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let preppedData = [];
+    let appendData = [];
+    let appendKey = '';
+
+    const parser = (file, callback) => {
+        const isCSV = file.name.toLowerCase().endsWith('.csv');
+        if (isCSV) {
+            Papa.parse(file, { header: true, skipEmptyLines: true, complete: (r) => callback(r.data) });
+        } else {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                callback(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]));
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    };
+
+    // Step 1 Logic: Prep & Filter
+    document.getElementById('prepInput').addEventListener('change', function(e) {
+        if (!e.target.files[0]) return;
+        parser(e.target.files[0], (data) => {
+            const getVal = (row, target) => {
+                const key = Object.keys(row).find(k => k.trim().toLowerCase() === target.toLowerCase());
+                return key ? String(row[key]).trim() : "";
+            };
+
+            preppedData = data.map(row => {
+                let rawAffinity = getVal(row, 'CnsSoDIVPriAffinityAttribute_VALUE') || getVal(row, 'CnsPSJHCnScores_COHORT');
+                let siteAcronym = rawAffinity.replace(/Campus Affinity/gi, '').trim();
+                if (siteAcronym) siteAcronym = `CA-${siteAcronym}`;
+
+                return {
+                    'siteacronym': siteAcronym,
+                    'BBCRM lookupID': getVal(row, 'Cns_LOOKUPID'),
+                    'first_name': getVal(row, 'Cns_FIRSTNAME'),
+                    'last_name': getVal(row, 'Cns_KEYNAME'),
+                    'Email': getVal(row, 'CnsEmailAdrs_EMAILADDRESS'),
+                    '_temp_affinity': rawAffinity // Keep hidden to delete later
+                };
+            });
+
+            showStatus('prepStatus', `Prepped ${preppedData.length} rows.`, 'success');
+            renderTable('prepPreview', preppedData.slice(0, 5));
+            document.getElementById('prepPreviewWrap').style.display = 'block';
+            checkReady();
+        });
+    });
+
+    // Step 2 Logic: Load Append File
+    document.getElementById('appendInput').addEventListener('change', function(e) {
+        if (!e.target.files[0]) return;
+        parser(e.target.files[0], (data) => {
+            if (!data.length) return;
+            appendHeaders = Object.keys(data[0]);
+            appendKey = appendHeaders.find(h => h.toLowerCase() === 'siteacronym');
+            
+            if (!appendKey) {
+                showStatus('appendStatus', 'Error: No "siteacronym" column found in append file.', 'error');
+                return;
+            }
+
+            appendData = data;
+            showStatus('appendStatus', `Loaded ${data.length} append records.`, 'success');
+            checkReady();
+        });
+    });
+
+    function checkReady() {
+        if (preppedData.length && appendData.length) {
+            document.getElementById('mergeBtn').disabled = false;
+        }
+    }
+
+    // Step 3 Logic: Merge and Clean
+    function executeMerge() {
+        const refMap = {};
+        appendData.forEach(row => {
+            const key = String(row[appendKey]).trim();
+            if (key) refMap[key] = row;
+        });
+
+        const finalResults = preppedData.map(mainRow => {
+            const match = refMap[mainRow.siteacronym] || {};
+            
+            // Merge matching data
+            let merged = { ...mainRow, ...match };
+
+            // 1. Remove the temp affinity/cohort column from the prepped list
+            delete merged['_temp_affinity'];
+            
+            // 2. Remove the affinity/cohort column if it exists in the append file 
+            // We search for names like "CnsSoDIV..." or "CnsPSJ..." or "Cohort"
+            Object.keys(merged).forEach(k => {
+                const lowerK = k.toLowerCase();
+                if (lowerK.includes('affinity') || lowerK.includes('cohort')) {
+                    delete merged[k];
+                }
+            });
+
+            return merged;
+        });
+
+        window.finalOutput = finalResults;
+        renderTable('finalPreview', finalResults.slice(0, 5));
+        document.getElementById('downloadArea').style.display = 'block';
+        showStatus('finalStatus', 'Merge successful!', 'success');
+    }
+
+    function renderTable(id, data) {
+        const table = document.getElementById(id);
+        const headers = Object.keys(data[0]).filter(h => h !== '_temp_affinity');
+        let html = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+        data.forEach(row => {
+            html += '<tr>' + headers.map(h => `<td>${row[h] || ''}</td>`).join('') + '</tr>';
+        });
+        table.innerHTML = html + '</tbody>';
+    }
+
+    function downloadCSV() {
+        const csv = Papa.unparse(window.finalOutput);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "Final_Emma_Import_List.csv";
+        link.click();
+    }
+
+    function showStatus(id, msg, type) {
+        const el = document.getElementById(id);
+        el.textContent = msg;
+        el.className = 'status ' + type;
+    }
+</script>
+</body>
+</html>

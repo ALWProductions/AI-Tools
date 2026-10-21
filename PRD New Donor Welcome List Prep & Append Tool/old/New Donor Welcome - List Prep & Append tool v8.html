@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>South New Donor Welcome - Workflow v6</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root { --blue: #2563eb; --green: #059669; --slate: #334155; }
+        body { font-family: -apple-system, sans-serif; background: #f8fafc; padding: 20px; color: var(--slate); line-height: 1.6; }
+        .container { max-width: 1100px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 30px; }
+        .section { border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 20px; transition: all 0.3s ease; }
+        .active { border-color: var(--blue); background: #f0f7ff; border-width: 2px; }
+        .step-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
+        .badge { background: var(--blue); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; }
+        .btn { padding: 10px 20px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; font-size: 14px; transition: opacity 0.2s; }
+        .btn-blue { background: var(--blue); color: white; }
+        .btn-green { background: var(--green); color: white; }
+        .btn-log { background: #e2e8f0; color: var(--slate); font-size: 11px; margin-left: 10px; }
+        .table-wrap { overflow-x: auto; max-height: 300px; border: 1px solid #e2e8f0; margin-top: 15px; background: white; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th, td { padding: 8px; text-align: left; border: 1px solid #e2e8f0; white-space: nowrap; }
+        th { background: #f1f5f9; position: sticky; top: 0; color: #475569; font-weight: 700; }
+        .log-list { font-family: 'Courier New', monospace; font-size: 11px; color: #475569; background: #f1f5f9; padding: 10px; border-radius: 4px; margin-top: 10px; max-height: 120px; overflow-y: auto; border: 1px solid #cbd5e1; }
+        .highlight-col { background: #fffbeb; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+        <h1>Donor Welcome: Prep &amp; Append Workflow</h1>
+        <button class="btn btn-blue" onclick="generateUserGuide()">Download PDF Guide</button>
+    </div>
+
+    <div id="section1" class="section active">
+        <div class="step-header">
+            <div style="display:flex; align-items:center;">
+                <span class="badge">1</span>
+                <h2>Upload &amp; Prep Client List</h2>
+            </div>
+            <button class="btn btn-log" onclick="downloadLog('prep')">Download Prep Log</button>
+        </div>
+        <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">Upload the source file. The original affinity/cohort column name will be preserved for review.</p>
+        <input type="file" id="prepFile" accept=".csv,.xlsx,.xls">
+        <div id="prepLog" class="log-list">System ready...</div>
+        <div id="prepPreviewWrap" class="table-wrap" style="display:none;">
+            <table id="prepPreview"></table>
+        </div>
+    </div>
+
+    <div id="section2" class="section">
+        <div class="step-header">
+            <div style="display:flex; align-items:center;">
+                <span class="badge">2</span>
+                <h2>Upload Append Data</h2>
+            </div>
+            <button class="btn btn-log" onclick="downloadLog('append')">Download Append Log</button>
+        </div>
+        <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">Upload the mapping file (requires 'siteacronym' or 'acronym' column). Download mapping file from campaign Matrix, as instructed.</p>
+        <input type="file" id="appendFile" accept=".csv,.xlsx,.xls" disabled>
+        <div id="appendLog" class="log-list">Waiting for Step 1...</div>
+    </div>
+
+    <div id="section3" class="section">
+        <div class="step-header">
+            <div style="display:flex; align-items:center;">
+                <span class="badge">3</span>
+                <h2>Final Review</h2>
+            </div>
+        </div>
+        <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">Review the merged data. The affinity/cohort column will be removed automatically upon saving.</p>
+        <button id="finalBtn" class="btn btn-green" onclick="finalizeAndSave()" disabled>Finalize &amp; Save</button>
+        <div id="finalPreviewWrap" class="table-wrap" style="display:none;">
+            <table id="finalPreview"></table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let logs = { prep: [], append: [] };
+    let preppedData = [];
+    let appendData = [];
+    let originalAffinityHeader = "";
+
+    function addLog(type, msg) {
+        const time = new Date().toLocaleTimeString();
+        logs[type].push(`[${time}] ${msg}`);
+        const logEl = document.getElementById(`${type}Log`);
+        logEl.innerHTML = logs[type].join('<br>');
+        logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function downloadLog(type) {
+        const blob = new Blob([logs[type].join('\n')], {type: 'text/plain'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${type}_workflow_log.txt`;
+        a.click();
+    }
+
+    const parser = (file, callback) => {
+        const isCSV = file.name.toLowerCase().endsWith('.csv');
+        if (isCSV) {
+            Papa.parse(file, { header: true, skipEmptyLines: true, complete: (r) => callback(r.data) });
+        } else {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                callback(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]));
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    };
+
+    // --- STEP 1: PREP ---
+    document.getElementById('prepFile').addEventListener('change', function(e) {
+        parser(e.target.files[0], (data) => {
+            const getOriginalHeader = (row, targets) => {
+                return Object.keys(row).find(k => targets.some(t => k.trim().toLowerCase() === t.toLowerCase()));
+            };
+
+            const getVal = (row, target) => {
+                const key = Object.keys(row).find(k => k.trim().toLowerCase() === target.toLowerCase());
+                return key ? String(row[key]).trim() : "";
+            };
+
+            // Detect and save the original header name to preserve it
+            originalAffinityHeader = getOriginalHeader(data[0], ['CnsSoDIVPriAffinityAttribute_VALUE', 'CnsPSJHCnScores_COHORT']);
+
+            preppedData = data.map((row, idx) => {
+                let rawAffinity = row[originalAffinityHeader] || "";
+                let siteAcronym = rawAffinity.replace(/Campus Affinity/gi, '').trim();
+                if (siteAcronym) siteAcronym = `CA-${siteAcronym}`;
+
+                if (!siteAcronym) addLog('prep', `Row ${idx+1}: Missing affinity data in "${originalAffinityHeader}"`);
+
+                const preppedRow = {
+                    'siteacronym': siteAcronym
+                };
+                
+                // Set the affinity data using the ORIGINAL header name
+                preppedRow[originalAffinityHeader] = rawAffinity;
+
+                // Add other required fields
+                preppedRow['BBCRM lookupID'] = getVal(row, 'Cns_LOOKUPID');
+                preppedRow['first_name'] = getVal(row, 'Cns_FIRSTNAME');
+                preppedRow['last_name'] = getVal(row, 'Cns_KEYNAME');
+                preppedRow['Email'] = getVal(row, 'CnsEmailAdrs_EMAILADDRESS');
+
+                return preppedRow;
+            });
+
+            addLog('prep', `Step 1 Complete: Preserved original column "${originalAffinityHeader}". ${preppedData.length} rows prepped.`);
+            renderTable('prepPreview', preppedData.slice(0, 10));
+            document.getElementById('prepPreviewWrap').style.display = 'block';
+            document.getElementById('appendFile').disabled = false;
+            document.getElementById('section2').classList.add('active');
+            document.getElementById('section1').classList.remove('active');
+        });
+    });
+
+    // --- STEP 2: APPEND ---
+    document.getElementById('appendFile').addEventListener('change', function(e) {
+        parser(e.target.files[0], (data) => {
+            if (!data.length) return;
+            const header = Object.keys(data[0]);
+            const key = header.find(h => h.toLowerCase() === 'siteacronym' || h.toLowerCase() === 'acronym');
+            
+            if (!key) {
+                addLog('append', 'ERROR: No "siteacronym" or "acronym" column found in append file.');
+                return;
+            }
+
+            appendData = data;
+            const refMap = {};
+            data.forEach(r => refMap[String(r[key]).trim()] = r);
+
+            window.finalMerged = preppedData.map(mainRow => {
+                const match = refMap[mainRow.siteacronym] || {};
+                const merged = { ...mainRow, ...match };
+                
+                if (!match[key]) addLog('append', `Row Match Failed: No reference for "${mainRow.siteacronym}"`);
+                
+                if (key !== 'siteacronym') delete merged[key];
+                return merged;
+            });
+
+            addLog('append', `Step 2 Complete: Appended data for ${window.finalMerged.length} rows.`);
+            renderTable('finalPreview', window.finalMerged.slice(0, 10));
+            document.getElementById('finalPreviewWrap').style.display = 'block';
+            document.getElementById('finalBtn').disabled = false;
+            document.getElementById('section3').classList.add('active');
+            document.getElementById('section2').classList.remove('active');
+        });
+    });
+
+    async function finalizeAndSave() {
+        // CLEANUP: Remove the preserved original affinity column only for final export
+        const cleanData = window.finalMerged.map(row => {
+            const newRow = { ...row };
+            delete newRow[originalAffinityHeader];
+            return newRow;
+        });
+
+        const csvString = Papa.unparse(cleanData);
+        
+        try {
+            if ('showSaveFilePicker' in window) {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: 'South_Donor_Welcome_Import.csv',
+                    types: [{ description: 'CSV File', accept: { 'text/csv': ['.csv'] } }]
+                });
+                const writable = await handle.createWritable();
+                await writable.write(csvString);
+                await writable.close();
+                addLog('append', 'SUCCESS: File saved to local machine.');
+            } else {
+                const blob = new Blob([csvString], { type: 'text/csv' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'South_Donor_Welcome_Import.csv';
+                a.click();
+            }
+        } catch (err) {
+            console.error("Save cancelled or failed", err);
+        }
+    }
+
+    function renderTable(id, data) {
+        const table = document.getElementById(id);
+        const headers = Object.keys(data[0]);
+        let html = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+        data.forEach(row => {
+            html += '<tr>' + headers.map(h => `<td class="${h === originalAffinityHeader ? 'highlight-col' : ''}">${row[h] || ''}</td>`).join('') + '</tr>';
+        });
+        table.innerHTML = html + '</tbody>';
+    }
+
+    function generateUserGuide() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setFontSize(18);
+        doc.text("User Guide: South New Donor Welcome Prep & Append Tool", 10, 20);
+        doc.setFontSize(12);
+        doc.text("Workflow Overview:", 10, 35);
+        doc.text("1. Upload Source List: Download client provided email list. This tool will delete columns we do not upload to Emma (such as address), detects affinity columns and creates and generates 'siteacronym' based on affinity column data.", 15, 45);
+        doc.text("   The original (affinity or cohort) column name is kept exactly as is for verification of successful prep and append.", 15, 52);
+        doc.text("2. Review Prepped Data: Ensure 'siteacronym' correctly prefixes with 'CA-' and matches the affinity or cohort column information.", 15, 62);
+        doc.text("3. Upload Append List: Download the appending list from the campaign matrix, never reuse an existing file from a prior run of this tool. This step will look for matches on 'siteacronym' or 'acronym', depending on the file.", 15, 72);
+        doc.text("4. Finalize & Save: This is the last look at the file before download, quickly flag issues before downloading. The original affinity column is removed for Emma import. After downloading, run the prepped and appended new list through the Append Check Tool (https://www.dropbox.com/scl/fi/02d5nxaxkifuav0806pa3/data_validation_tool_v2.html?rlkey=r96zhs0k6r3x6ih4wwvfjo8fi&dl=0).", 15, 82);
+        doc.text("- Logs: Download logs at any step to check for missing matches.", 15, 92);
+        doc.save("South_New Donor Welcome_Tool_Guide.pdf");
+    }
+</script>
+</body>
+</html>
