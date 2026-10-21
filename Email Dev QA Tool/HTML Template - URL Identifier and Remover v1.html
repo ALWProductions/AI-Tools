@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Link URL Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+
+        .input-section, .links-section {
+            padding: 30px;
+        }
+
+        .input-section {
+            border-right: 2px solid #e5e7eb;
+            background: #f9fafb;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #1f2937;
+        }
+
+        textarea {
+            width: 100%;
+            height: 400px;
+            padding: 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .links-list {
+            max-height: 450px;
+            overflow-y: auto;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+        }
+
+        .link-item {
+            padding: 15px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: background 0.2s;
+        }
+
+        .link-item:hover {
+            background: #f9fafb;
+        }
+
+        .link-item:last-child {
+            border-bottom: none;
+        }
+
+        .checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .link-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .link-url {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #667eea;
+            word-break: break-all;
+            margin-bottom: 4px;
+        }
+
+        .link-context {
+            font-size: 12px;
+            color: #6b7280;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f0f9ff;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-item {
+            flex: 1;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .bulk-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .bulk-actions button {
+            flex: 1;
+            padding: 10px;
+            font-size: 13px;
+        }
+
+        .empty-state {
+            padding: 60px 20px;
+            text-align: center;
+            color: #6b7280;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .input-section {
+                border-right: none;
+                border-bottom: 2px solid #e5e7eb;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔗 HTML Link URL Editor</h1>
+            <p>Extract, select, and remove URLs from HTML href attributes while preserving all other code</p>
+        </div>
+
+        <div class="main-content">
+            <div class="input-section">
+                <h2 class="section-title">HTML Input</h2>
+                <textarea id="htmlInput" placeholder="Paste your HTML code here..."></textarea>
+                <div class="button-group">
+                    <button class="btn-primary" onclick="analyzeHTML()">🔍 Extract Links</button>
+                    <button class="btn-secondary" onclick="clearInput()">Clear</button>
+                </div>
+            </div>
+
+            <div class="links-section">
+                <h2 class="section-title">Found Links</h2>
+                
+                <div class="stats" id="stats" style="display: none;">
+                    <div class="stat-item">
+                        <div class="stat-label">Total Links</div>
+                        <div class="stat-value" id="totalLinks">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Selected</div>
+                        <div class="stat-value" id="selectedLinks">0</div>
+                    </div>
+                </div>
+
+                <div class="bulk-actions" id="bulkActions" style="display: none;">
+                    <button class="btn-secondary" onclick="selectAll()">Select All</button>
+                    <button class="btn-secondary" onclick="deselectAll()">Deselect All</button>
+                    <button class="btn-primary" onclick="removeSelected()">Remove Selected URLs</button>
+                </div>
+
+                <div class="links-list" id="linksList">
+                    <div class="empty-state">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                        </svg>
+                        <p>No HTML analyzed yet. Paste your HTML code and click "Extract Links".</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let originalHTML = '';
+        let links = [];
+
+        function analyzeHTML() {
+            const input = document.getElementById('htmlInput').value;
+            if (!input.trim()) {
+                alert('Please paste some HTML code first!');
+                return;
+            }
+
+            originalHTML = input;
+            links = [];
+
+            const hrefRegex = /href\s*=\s*["']([^"']+)["']/gi;
+            let match;
+            let index = 0;
+
+            while ((match = hrefRegex.exec(input)) !== null) {
+                const url = match[1];
+                const fullMatch = match[0];
+                const startPos = match.index;
+                
+                const contextStart = Math.max(0, startPos - 30);
+                const contextEnd = Math.min(input.length, startPos + fullMatch.length + 30);
+                const context = input.substring(contextStart, contextEnd).replace(/\s+/g, ' ');
+
+                links.push({
+                    id: index++,
+                    url: url,
+                    fullMatch: fullMatch,
+                    position: startPos,
+                    context: context,
+                    selected: false
+                });
+            }
+
+            displayLinks();
+            updateStats();
+        }
+
+        function displayLinks() {
+            const listContainer = document.getElementById('linksList');
+            const statsDiv = document.getElementById('stats');
+            const bulkActionsDiv = document.getElementById('bulkActions');
+
+            if (links.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="empty-state">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                        </svg>
+                        <p>No links found in the HTML. Make sure your HTML contains anchor tags with href attributes.</p>
+                    </div>
+                `;
+                statsDiv.style.display = 'none';
+                bulkActionsDiv.style.display = 'none';
+                return;
+            }
+
+            statsDiv.style.display = 'flex';
+            bulkActionsDiv.style.display = 'flex';
+
+            listContainer.innerHTML = links.map(link => `
+                <div class="link-item">
+                    <input type="checkbox" class="checkbox" id="link-${link.id}" 
+                           ${link.selected ? 'checked' : ''} 
+                           onchange="toggleLink(${link.id})">
+                    <div class="link-info">
+                        <div class="link-url">${escapeHtml(link.url)}</div>
+                        <div class="link-context">...${escapeHtml(link.context)}...</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleLink(id) {
+            const link = links.find(l => l.id === id);
+            if (link) {
+                link.selected = !link.selected;
+                updateStats();
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('totalLinks').textContent = links.length;
+            document.getElementById('selectedLinks').textContent = links.filter(l => l.selected).length;
+        }
+
+        function selectAll() {
+            links.forEach(link => link.selected = true);
+            displayLinks();
+            updateStats();
+        }
+
+        function deselectAll() {
+            links.forEach(link => link.selected = false);
+            displayLinks();
+            updateStats();
+        }
+
+        function removeSelected() {
+            const selectedLinks = links.filter(l => l.selected);
+            
+            if (selectedLinks.length === 0) {
+                alert('Please select at least one link to remove!');
+                return;
+            }
+
+            if (!confirm(`Remove ${selectedLinks.length} URL(s) from the HTML?`)) {
+                return;
+            }
+
+            let modifiedHTML = originalHTML;
+            
+            selectedLinks.sort((a, b) => b.position - a.position).forEach(link => {
+                const beforeLink = modifiedHTML.substring(0, link.position);
+                const afterLink = modifiedHTML.substring(link.position + link.fullMatch.length);
+                
+                const quoteChar = link.fullMatch.includes('href="') ? '"' : "'";
+                const replacement = `href=${quoteChar}${quoteChar}`;
+                
+                modifiedHTML = beforeLink + replacement + afterLink;
+            });
+
+            document.getElementById('htmlInput').value = modifiedHTML;
+            
+            alert(`Successfully removed ${selectedLinks.length} URL(s)! The modified HTML is now in the input box. You can copy it or analyze it again.`);
+            
+            links = links.filter(l => !l.selected);
+            displayLinks();
+            updateStats();
+        }
+
+        function clearInput() {
+            if (document.getElementById('htmlInput').value && !confirm('Clear all content?')) {
+                return;
+            }
+            document.getElementById('htmlInput').value = '';
+            originalHTML = '';
+            links = [];
+            displayLinks();
+            updateStats();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

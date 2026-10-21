@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Analysis Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            min-height: 100vh;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+
+        .step-nav {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 30px;
+        }
+
+        .step-btn {
+            background: none;
+            border: none;
+            padding: 15px 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .step-btn.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+        }
+
+        .step-btn:hover {
+            color: #2c3e50;
+        }
+
+        .step-content {
+            display: none;
+            margin-bottom: 30px;
+        }
+
+        .step-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .file-upload {
+            border: 2px dashed #ddd;
+            padding: 20px;
+            text-align: center;
+            border-radius: 4px;
+            transition: border-color 0.3s ease;
+        }
+
+        .file-upload:hover {
+            border-color: #3498db;
+        }
+
+        .file-status {
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .file-status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .file-status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .results {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .results h3 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .result-item {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        .result-item.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .result-item.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .result-item.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .spam-score {
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .spam-score.low {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .spam-score.medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .spam-score.high {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #2980b9;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #5a6268;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .url-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        .url-item {
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+            word-break: break-all;
+        }
+
+        .url-item:last-child {
+            border-bottom: none;
+        }
+
+        .alt-text-generator {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .generated-alt-text {
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            border: 1px solid #c3e6cb;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 15px 0;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Email Analysis Tool</h1>
+        
+        <!-- Step Navigation -->
+        <div class="step-nav">
+            <button class="step-btn active" onclick="showStep(1)">Step 1: Copy Comparison</button>
+            <button class="step-btn" onclick="showStep(2)">Step 2: URL Analysis</button>
+            <button class="step-btn" onclick="showStep(3)">Step 3: Alt-Text Analysis</button>
+            <button class="step-btn" onclick="showStep(4)">Step 4: Spam Risk Analysis</button>
+        </div>
+
+        <!-- Step 1: Copy Comparison -->
+        <div id="step1" class="step-content active">
+            <h2>Step 1: Copy Comparison</h2>
+            
+            <div class="form-group">
+                <label for="emailFile">Upload HTML/EML File *</label>
+                <div class="file-upload">
+                    <input type="file" id="emailFile" accept=".html,.eml" onchange="handleEmailFile(this)">
+                    <p>Choose HTML or EML file</p>
+                </div>
+                <div id="emailFileStatus"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Reference Source</label>
+                
+                <div class="form-group">
+                    <label for="referenceFile">Upload Reference File</label>
+                    <input type="file" id="referenceFile" onchange="handleReferenceFile(this)">
+                    <div id="referenceFileStatus"></div>
+                </div>
+                
+                <div class="divider">OR</div>
+                
+                <div class="form-group">
+                    <label for="referenceLink">Reference Link (Dropbox, Google Drive, etc.)</label>
+                    <input type="url" id="referenceLink" placeholder="https://...">
+                </div>
+            </div>
+
+            <div id="copyResults"></div>
+        </div>
+
+        <!-- Step 2: URL Analysis -->
+        <div id="step2" class="step-content">
+            <h2>Step 2: URL Analysis</h2>
+            
+            <div class="form-group">
+                <label for="providedUrls">Provided URLs (one per line)</label>
+                <textarea id="providedUrls" placeholder="https://example.com/page1&#10;https://example.com/page2&#10;..."></textarea>
+            </div>
+
+            <div id="urlResults"></div>
+        </div>
+
+        <!-- Step 3: Alt-Text Analysis -->
+        <div id="step3" class="step-content">
+            <h2>Step 3: Alt-Text Analysis</h2>
+            
+            <div class="alt-text-generator">
+                <h3>Alt-Text Generator</h3>
+                <div class="form-group">
+                    <label for="altTextImage">Upload Image (JPG/PNG)</label>
+                    <input type="file" id="altTextImage" accept=".jpg,.jpeg,.png" onchange="handleAltTextImage(this)">
+                    <div id="altTextImageStatus"></div>
+                </div>
+                <button class="btn btn-primary" onclick="generateAltText()" id="generateBtn" disabled>Generate Alt Text</button>
+                <div id="generatedAltText"></div>
+            </div>
+
+            <div id="altTextResults"></div>
+        </div>
+
+        <!-- Step 4: Spam Risk Analysis -->
+        <div id="step4" class="step-content">
+            <h2>Step 4: Spam Risk Analysis</h2>
+            
+            <div id="spamResults"></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div>
+                <button class="btn btn-secondary" onclick="previousStep()" id="prevBtn" disabled>Previous</button>
+                <button class="btn btn-secondary" onclick="nextStep()" id="nextBtn">Next</button>
+            </div>
+            
+            <button class="btn btn-primary" onclick="analyzeCurrentStep()" id="analyzeBtn" disabled>Analyze Current Step</button>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        let emailFileContent = null;
+        let referenceFileContent = null;
+        let altTextImageFile = null;
+        let analysisResults = {};
+
+        function showStep(step) {
+            // Hide all steps
+            for (let i = 1; i <= 4; i++) {
+                document.getElementById(`step${i}`).classList.remove('active');
+                document.querySelector(`.step-btn:nth-child(${i})`).classList.remove('active');
+            }
+            
+            // Show selected step
+            document.getElementById(`step${step}`).classList.add('active');
+            document.querySelector(`.step-btn:nth-child(${step})`).classList.add('active');
+            
+            currentStep = step;
+            updateControls();
+        }
+
+        function updateControls() {
+            document.getElementById('prevBtn').disabled = currentStep === 1;
+            document.getElementById('nextBtn').disabled = currentStep === 4;
+            document.getElementById('analyzeBtn').disabled = !emailFileContent;
+        }
+
+        function previousStep() {
+            if (currentStep > 1) {
+                showStep(currentStep - 1);
+            }
+        }
+
+        function nextStep() {
+            if (currentStep < 4) {
+                showStep(currentStep + 1);
+            }
+        }
+
+        function handleEmailFile(input) {
+            const file = input.files[0];
+            const statusDiv = document.getElementById('emailFileStatus');
+            
+            if (file && (file.type === 'text/html' || file.name.endsWith('.eml'))) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    emailFileContent = e.target.result;
+                    statusDiv.innerHTML = `<div class="file-status success">✓ ${file.name} loaded successfully</div>`;
+                    updateControls();
+                };
+                reader.readAsText(file);
+            } else {
+                statusDiv.innerHTML = '<div class="file-status error">Please upload a valid HTML or EML file</div>';
+                emailFileContent = null;
+                updateControls();
+            }
+        }
+
+        function handleReferenceFile(input) {
+            const file = input.files[0];
+            const statusDiv = document.getElementById('referenceFileStatus');
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    referenceFileContent = e.target.result;
+                    statusDiv.innerHTML = `<div class="file-status success">✓ ${file.name} loaded successfully</div>`;
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function handleAltTextImage(input) {
+            const file = input.files[0];
+            const statusDiv = document.getElementById('altTextImageStatus');
+            const generateBtn = document.getElementById('generateBtn');
+            
+            if (file && file.type.startsWith('image/') && (file.type.includes('jpeg') || file.type.includes('png'))) {
+                altTextImageFile = file;
+                statusDiv.innerHTML = `<div class="file-status success">✓ ${file.name} ready for analysis</div>`;
+                generateBtn.disabled = false;
+            } else {
+                statusDiv.innerHTML = '<div class="file-status error">Please upload a valid JPG or PNG image</div>';
+                altTextImageFile = null;
+                generateBtn.disabled = true;
+            }
+        }
+
+        function generateAltText() {
+            if (!altTextImageFile) return;
+            
+            // Simulate AI alt-text generation
+            const mockAltTexts = [
+                "A professional businessman in a suit presenting to a group",
+                "Modern office interior with natural lighting and plants",
+                "Colorful bar chart showing quarterly sales growth",
+                "Team meeting around a conference table with laptops",
+                "Close-up of hands typing on a laptop keyboard",
+                "Smiling customer service representative with headset",
+                "Stack of documents on a desk next to a computer",
+                "Business handshake in a modern office setting"
+            ];
+            
+            const generatedText = mockAltTexts[Math.floor(Math.random() * mockAltTexts.length)];
+            document.getElementById('generatedAltText').innerHTML = 
+                `<div class="generated-alt-text"><strong>Generated Alt Text:</strong> ${generatedText}</div>`;
+        }
+
+        function analyzeCurrentStep() {
+            switch(currentStep) {
+                case 1:
+                    analyzeCopyComparison();
+                    break;
+                case 2:
+                    analyzeUrls();
+                    break;
+                case 3:
+                    analyzeAltText();
+                    break;
+                case 4:
+                    analyzeSpamRisk();
+                    break;
+            }
+        }
+
+        function analyzeCopyComparison() {
+            if (!emailFileContent) return;
+            
+            const emailText = extractTextFromHtml(emailFileContent);
+            let referenceText = '';
+            
+            if (referenceFileContent) {
+                referenceText = extractTextFromHtml(referenceFileContent);
+            } else if (document.getElementById('referenceLink').value) {
+                referenceText = `Content from: ${document.getElementById('referenceLink').value}`;
+            }
+            
+            const emailWords = emailText.split(/\s+/).filter(w => w.length > 0);
+            const referenceWords = referenceText.split(/\s+/).filter(w => w.length > 0);
+            
+            // Simple similarity calculation
+            const commonWords = emailWords.filter(word => referenceWords.includes(word.toLowerCase()));
+            const similarity = referenceWords.length > 0 ? 
+                Math.round((commonWords.length / Math.max(emailWords.length, referenceWords.length)) * 100) : 0;
+            
+            const resultsHtml = `
+                <div class="results">
+                    <h3>Copy Comparison Results</h3>
+                    <div class="result-item ${similarity >= 70 ? 'success' : similarity >= 40 ? 'warning' : 'error'}">
+                        Similarity Score: ${similarity}%
+                    </div>
+                    <div class="result-item">Email word count: ${emailWords.length}</div>
+                    <div class="result-item">Reference word count: ${referenceWords.length}</div>
+                    <div class="result-item">
+                        Status: ${similarity >= 70 ? 'High similarity - content matches well' : 
+                                 similarity >= 40 ? 'Moderate similarity - some differences detected' : 
+                                 'Low similarity - significant differences detected'}
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('copyResults').innerHTML = resultsHtml;
+        }
+
+        function analyzeUrls() {
+            if (!emailFileContent) return;
+            
+            const emailUrls = extractUrlsFromHtml(emailFileContent);
+            const providedUrls = document.getElementById('providedUrls').value
+                .split('\n')
+                .map(url => url.trim())
+                .filter(url => url.length > 0);
+            
+            const missingUrls = providedUrls.filter(url => !emailUrls.includes(url));
+            const extraUrls = emailUrls.filter(url => !providedUrls.includes(url));
+            
+            let resultsHtml = `
+                <div class="results">
+                    <h3>URL Analysis Results</h3>
+                    <div class="result-item">URLs found in email: ${emailUrls.length}</div>
+                    <div class="result-item">Provided URLs: ${providedUrls.length}</div>
+            `;
+            
+            if (emailUrls.length > 0) {
+                resultsHtml += `
+                    <div class="result-item">
+                        <strong>URLs in Email:</strong>
+                        <div class="url-list">
+                            ${emailUrls.map(url => `<div class="url-item">${url}</div>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (missingUrls.length > 0) {
+                resultsHtml += `
+                    <div class="result-item error">
+                        <strong>Missing URLs (${missingUrls.length}):</strong>
+                        <div class="url-list">
+                            ${missingUrls.map(url => `<div class="url-item">${url}</div>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (extraUrls.length > 0) {
+                resultsHtml += `
+                    <div class="result-item warning">
+                        <strong>Extra URLs (${extraUrls.length}):</strong>
+                        <div class="url-list">
+                            ${extraUrls.map(url => `<div class="url-item">${url}</div>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            resultsHtml += '</div>';
+            document.getElementById('urlResults').innerHTML = resultsHtml;
+        }
+
+        function analyzeAltText() {
+            if (!emailFileContent) return;
+            
+            const images = extractImagesFromHtml(emailFileContent);
+            const imagesWithAlt = images.filter(img => img.alt && img.alt.trim());
+            const imagesWithoutAlt = images.filter(img => !img.alt || !img.alt.trim());
+            const weakAltText = images.filter(img => 
+                img.alt && (img.alt.length < 5 || img.alt.toLowerCase().includes('image'))
+            );
+            
+            let resultsHtml = `
+                <div class="results">
+                    <h3>Alt-Text Analysis Results</h3>
+                    <div class="result-item">Total images: ${images.length}</div>
+                    <div class="result-item success">Images with alt text: ${imagesWithAlt.length}</div>
+                    <div class="result-item ${imagesWithoutAlt.length > 0 ? 'error' : 'success'}">
+                        Images without alt text: ${imagesWithoutAlt.length}
+                    </div>
+                    <div class="result-item ${weakAltText.length > 0 ? 'warning' : 'success'}">
+                        Images with weak alt text: ${weakAltText.length}
+                    </div>
+            `;
+            
+            if (imagesWithoutAlt.length > 0) {
+                resultsHtml += `
+                    <div class="result-item error">
+                        <strong>Images missing alt text:</strong>
+                        <div class="url-list">
+                            ${imagesWithoutAlt.map(img => `<div class="url-item">${img.src}</div>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            resultsHtml += '</div>';
+            document.getElementById('altTextResults').innerHTML = resultsHtml;
+        }
+
+        function analyzeSpamRisk() {
+            if (!emailFileContent) return;
+            
+            const emailText = extractTextFromHtml(emailFileContent);
+            const images = extractImagesFromHtml(emailFileContent);
+            const urls = extractUrlsFromHtml(emailFileContent);
+            const subject = extractSubject(emailFileContent);
+            const preheader = extractPreheader(emailFileContent);
+            
+            let spamScore = 0;
+            let issues = [];
+            
+            // File size check
+            const fileSize = new Blob([emailFileContent]).size;
+            if (fileSize > 100000) {
+                spamScore += 2;
+                issues.push('File size too large (over 100KB)');
+            }
+            
+            // Subject line analysis
+            const subjectIssues = analyzeSubjectLine(subject);
+            spamScore += subjectIssues.length;
+            issues.push(...subjectIssues.map(issue => `Subject: ${issue}`));
+            
+            // Preheader analysis
+            const preheaderIssues = analyzePreheader(preheader);
+            spamScore += preheaderIssues.length;
+            issues.push(...preheaderIssues.map(issue => `Preheader: ${issue}`));
+            
+            // Image to text ratio
+            const wordCount = emailText.split(/\s+/).filter(w => w.length > 0).length;
+            const imageToTextRatio = wordCount > 0 ? images.length / wordCount : images.length;
+            if (imageToTextRatio > 0.3) {
+                spamScore += 3;
+                issues.push('Too many images relative to text content');
+            }
+            
+            // Link analysis
+            if (urls.length > 10) {
+                spamScore += 2;
+                issues.push('Excessive number of links');
+            }
+            
+            const riskLevel = spamScore <= 3 ? 'low' : spamScore <= 6 ? 'medium' : 'high';
+            const riskText = spamScore <= 3 ? 'Low Risk' : spamScore <= 6 ? 'Medium Risk' : 'High Risk';
+            
+            let resultsHtml = `
+                <div class="results">
+                    <h3>Spam Risk Analysis Results</h3>
+                    <div class="spam-score ${riskLevel}">
+                        Spam Risk Score: ${spamScore}/10 - ${riskText}
+                    </div>
+                    <div class="result-item">File size: ${Math.round(fileSize / 1024)} KB</div>
+                    <div class="result-item">Subject: "${subject}"</div>
+                    <div class="result-item">Preheader: "${preheader}"</div>
+                    <div class="result-item">Image to text ratio: ${Math.round(imageToTextRatio * 100)}%</div>
+                    <div class="result-item">Total links: ${urls.length}</div>
+            `;
+            
+            if (issues.length > 0) {
+                resultsHtml += `
+                    <div class="result-item error">
+                        <strong>Issues detected:</strong>
+                        <ul style="margin-left: 20px; margin-top: 5px;">
+                            ${issues.map(issue => `<li>${issue}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            } else {
+                resultsHtml += '<div class="result-item success">No issues detected!</div>';
+            }
+            
+            resultsHtml += '</div>';
+            document.getElementById('spamResults').innerHTML = resultsHtml;
+        }
+
+        // Helper functions
+        function extractTextFromHtml(html) {
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            return div.textContent || div.innerText || '';
+        }
+
+        function extractUrlsFromHtml(html) {
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            const links = div.querySelectorAll('a[href]');
+            return Array.from(links).map(link => link.href);
+        }
+
+        function extractImagesFromHtml(html) {
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            const images = div.querySelectorAll('img');
+            return Array.from(images).map(img => ({
+                src: img.src,
+                alt: img.alt,
+                width: img.width,
+                height: img.height
+            }));
+        }
+
+        function extractSubject(content) {
+            const subjectMatch = content.match(/<title>(.*?)<\/title>/i) || 
+                                content.match(/Subject:\s*(.*)/i);
+            return subjectMatch ? subjectMatch[1].trim() : 'No subject found';
+        }
+
+        function extractPreheader(content) {
+            const preheaderMatch = content.match(/<div[^>]*preheader[^>]*>(.*?)<\/div>/i) ||
+                                  content.match(/preheader[^>]*>(.*?)<\/[^>]*>/i);
+            return preheaderMatch ? extractTextFromHtml(preheaderMatch[1]) : 'No preheader found';
+        }
+
+        function analyzeSubjectLine(subject) {
+            const issues = [];
+            if (subject.length > 50) issues.push('Too long (over 50 characters)');
+            if (subject.includes('!!!') || subject.includes('???')) issues.push('Excessive punctuation');
+            if (subject.toUpperCase() === subject && subject.length > 5) issues.push('All caps');
+            if (/free|urgent|limited time|act now|click here|buy now/i.test(subject)) {
+                issues.push('Contains spam trigger words');
+            }
+            return issues;
+        }
+
+        function analyzePreheader(preheader) {
+            const issues = [];
+            if (!preheader || preheader === 'No preheader found') {
+                issues.push('Missing preheader text');
+            } else if (preheader.length > 90) {
+                issues.push('Too long (over 90 characters)');
+            }
+            return issues;
+        }
+
+        // Initialize
+        updateControls();
+    </script>
+</body>
+</html>

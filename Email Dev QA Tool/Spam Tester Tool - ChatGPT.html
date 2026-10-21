@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Email Spam Heuristic Tester</title>
+  <style>
+    :root{
+      --bg:#0f1720; --card:#0b1220; --muted:#9aa4b2; --accent:#4f46e5; --good:#16a34a; --bad:#ef4444;
+      --panel:#0b1220; color-scheme: dark;
+    }
+    body{font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial; margin:0; background:linear-gradient(180deg,#051026 0%, #061226 100%); color:#e6eef8;}
+    .wrap{max-width:1100px;margin:24px auto;padding:20px;}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+    h1{margin:0;font-size:20px}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+    .grid{display:grid;grid-template-columns:1fr 380px;gap:18px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:16px;border-radius:10px;box-shadow:0 6px 18px rgba(2,6,23,0.6); border:1px solid rgba(255,255,255,0.03)}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type=text], textarea{width:100%;padding:10px;border-radius:8px;background:#071026;border:1px solid rgba(255,255,255,0.03);color:#e6eef8}
+    textarea{min-height:120px;resize:vertical}
+    .row{display:flex;gap:10px;align-items:center}
+    button{background:var(--accent);border:0;padding:10px 12px;border-radius:8px;color:white;cursor:pointer}
+    .muted{color:var(--muted);font-size:13px}
+    .small{font-size:12px;color:var(--muted)}
+    input[type=file]{color:var(--muted)}
+    .result-score{font-size:40px;font-weight:700;margin:6px 0}
+    .bar{height:12px;background:#10202f;border-radius:8px;overflow:hidden;margin:8px 0}
+    .bar > i{display:block;height:100%;border-radius:8px}
+    .list{margin:8px 0;padding:0;list-style:none}
+    .list li{padding:6px 0;border-bottom:1px dashed rgba(255,255,255,0.02);font-size:13px}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,0.03);font-size:12px;color:var(--muted)}
+    .ok{color:var(--good)} .warn{color:#e9b33b} .danger{color:var(--bad)}
+    pre{white-space:pre-wrap;background:#041725;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.02);font-size:13px;color:#cfe9ff}
+    .footer{margin-top:12px;color:var(--muted);font-size:13px}
+    .metric{display:flex;justify-content:space-between;align-items:center;margin:6px 0}
+    .metric strong{font-size:13px}
+    .domain-list{max-height:140px;overflow:auto;padding:6px;background:#071826;border-radius:6px;border:1px solid rgba(255,255,255,0.02)}
+    .hint{font-size:12px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Email Spam Heuristic Tester</h1>
+        <p class="lead">Drop a .eml or .html file, paste HTML, or type a subject + preheader. Client-side heuristic scoring and suggestions.</p>
+      </div>
+      <div style="margin-left:auto" class="small muted">Local-only — no network calls</div>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <label>Subject line</label>
+        <input id="subject" type="text" placeholder="Enter subject line"/>
+        <label style="margin-top:10px">Preheader</label>
+        <input id="preheader" type="text" placeholder="Enter preheader text (optional)"/>
+        <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+          <div style="flex:1">
+            <label class="small muted">Upload .eml or .html</label>
+            <input id="file" type="file" accept=".eml,.html,text/html"/>
+          </div>
+          <div>
+            <label class="small muted">Or</label><br/>
+            <button id="pasteHtmlBtn">Paste HTML</button>
+          </div>
+        </div>
+
+        <label style="margin-top:12px">Or paste HTML</label>
+        <textarea id="htmlInput" placeholder="Paste HTML of email body"></textarea>
+
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button id="analyzeBtn">Analyze</button>
+          <button id="clearBtn" style="background:#223044">Clear</button>
+        </div>
+
+        <section class="footer">
+          <div class="hint">Heuristics include copy-to-image ratio, links/domains, spammy words, exclamation/all-caps, base64 images, scripts/forms, images without alt text, and more. Not a replacement for real deliverability tests (SPF/DKIM/ISP reputation).</div>
+        </section>
+      </div>
+
+      <aside class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <label class="small muted">Spam Score</label>
+            <div id="scoreBlock">
+              <div class="result-score" id="score">—</div>
+              <div class="muted small">Lower is better (0 = clean, 100 = very risky)</div>
+            </div>
+          </div>
+          <div style="width:140px;text-align:right">
+            <div class="badge" id="verdictBadge">No data</div>
+          </div>
+        </div>
+
+        <div style="margin-top:10px">
+          <div class="metric"><strong>Copy vs images</strong><span id="copyImageRatio">—</span></div>
+          <div class="metric"><strong>Links</strong><span id="linkCount">—</span></div>
+          <div class="metric"><strong>Unique domains</strong><span id="domainCount">—</span></div>
+          <div class="metric"><strong>Images w/o alt</strong><span id="missingAlt">—</span></div>
+          <div class="metric"><strong>Base64 images</strong><span id="base64Count">—</span></div>
+          <div class="metric"><strong>Suspicious words</strong><span id="spammyWords">—</span></div>
+        </div>
+
+        <div style="margin-top:12px">
+          <label class="small muted">Score breakdown</label>
+          <ul class="list" id="breakdown"></ul>
+        </div>
+
+        <div style="margin-top:10px">
+          <label class="small muted">Detected link domains</label>
+          <div class="domain-list" id="domainList">—</div>
+        </div>
+
+        <div style="margin-top:12px">
+          <label class="small muted">Actionable suggestions</label>
+          <ul id="suggestions" class="list"></ul>
+        </div>
+      </aside>
+    </div>
+
+    <div style="max-width:1100px;margin:14px auto">
+      <div class="card" style="margin-top:14px">
+        <label class="small muted">Parsed plain text preview</label>
+        <pre id="parsedText">No analysis yet</pre>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // Spammy words list (small set; expand as needed)
+  const SPAM_WORDS = [
+    "free", "buy now", "act now", "limited time", "click here", "guarantee",
+    "100% free", "risk free", "no cost", "winner", "won", "prize", "earn money",
+    "urgent", "important update", "congratulations", "credit card", "dear friend"
+  ];
+
+  function sanitizeText(t){
+    return (t||"").replace(/\\s+/g,' ').trim();
+  }
+
+  function parseEML(emlText){
+    // Basic .eml parsing: find text/html part if multipart, else take body after first blank line
+    const lower = emlText.toLowerCase();
+    // If Content-Type multipart, attempt to extract text/html part
+    let html = null;
+    const ctMatch = emlText.match(/content-type:\\s*multipart\\/[\\w\\-;=\\s\\S]*boundary="?(.*?)"?\\r?\\n/i);
+    if(ctMatch){
+      const boundary = ctMatch[1];
+      const parts = emlText.split(new RegExp('--' + escapeRegExp(boundary), 'g'));
+      for(const p of parts){
+        if(/content-type:\\s*text\\/html/i.test(p)){
+          // remove headers inside part
+          const idx = p.indexOf('\\r\\n\\r\\n');
+          if(idx > -1) html = p.substring(idx+4);
+          else html = p;
+          break;
+        }
+      }
+    }
+    // fallback: if Content-Type: text/html anywhere, extract
+    if(!html){
+      const m = emlText.match(/content-type:.*text\\/html[\\s\\S]*?\\r?\\n\\r?\\n([\\s\\S]*)/i);
+      if(m) html = m[1];
+    }
+    if(!html){
+      // fallback: body after first blank line
+      const idx = emlText.indexOf('\\r\\n\\r\\n');
+      if(idx > -1) html = emlText.substring(idx+4);
+      else html = '';
+    }
+    return html.trim();
+  }
+
+  function escapeRegExp(s){ return s.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'); }
+
+  function parseHTMLtoDoc(html){
+    const parser = new DOMParser();
+    // Ensure a single root by wrapping if necessary
+    const doc = parser.parseFromString(html, 'text/html');
+    return doc;
+  }
+
+  function extractMetrics(html, subject, preheader){
+    const doc = parseHTMLtoDoc(html);
+    const body = doc.body || document.createElement('body');
+
+    // text content (attempt to remove script/style)
+    const clone = body.cloneNode(true);
+    // remove scripts and styles
+    clone.querySelectorAll('script, style, meta, link').forEach(n => n.remove());
+    const text = sanitizeText(clone.innerText || clone.textContent || '');
+    const textChars = text.length;
+    const textWords = text.split(/\\s+/).filter(Boolean).length;
+
+    // images
+    const images = Array.from(clone.querySelectorAll('img'));
+    const imagesCount = images.length;
+    const imagesMissingAlt = images.filter(i => !i.getAttribute('alt') || i.getAttribute('alt').trim()==='').length;
+    const base64Images = images.filter(i => {
+      const s = i.getAttribute('src') || '';
+      return s.startsWith('data:');
+    }).length;
+
+    // background images inline style
+    const withBg = Array.from(clone.querySelectorAll('[style*="background"], [style*="background-image"]')).filter(el=>{
+      const st = el.getAttribute('style')||'';
+      return /background(-image)?\\s*:\\s*url\\(/i.test(st);
+    }).length;
+
+    // links
+    const links = Array.from(clone.querySelectorAll('a')).map(a=> (a.getAttribute('href')||'').trim()).filter(Boolean);
+    const linkCount = links.length;
+
+    // domains
+    const domains = links.map(href => {
+      try {
+        // handle relative URLs
+        if(/^[\\/]/.test(href) || /^[^:]+$/.test(href)) return '(relative)';
+        const u = new URL(href, 'https://example.invalid');
+        return u.hostname.replace(/^www\\./,'').toLowerCase();
+      } catch(e){
+        return '(invalid)';
+      }
+    });
+    const uniqueDomains = Array.from(new Set(domains));
+
+    // shortener detection
+    const shorteners = ["bit.ly","t.co","tinyurl.com","ow.ly","buff.ly","is.gd","cli.gs","shorturl.at"];
+    const shortUrlCount = domains.filter(d=>shorteners.includes(d)).length;
+
+    // external resources: script tags, iframes, forms
+    const scriptCount = clone.querySelectorAll('script[src], iframe').length;
+    const formsCount = clone.querySelectorAll('form').length;
+    const inlineJs = clone.querySelectorAll('script:not([src])').length;
+
+    // images with very large src (could be base64): already counted base64
+    // suspicious attributes: mailto links
+    const mailtoCount = links.filter(h=>h.toLowerCase().startsWith('mailto:')).length;
+
+    // URLs with different domains than "from domain" can't be checked w/o headers — we will just list domains
+
+    // subject/preheader analysis
+    const subj = subject || '';
+    const pre = preheader || '';
+
+    const exclamations = (subj.match(/!/g)||[]).length + (pre.match(/!/g)||[]).length;
+    const numbersCount = (subj.match(/\\d+/g)||[]).length;
+    const allCapsPct = calculateAllCapsPercent(subj);
+
+    // spammy words
+    const lowered = (subj + ' ' + pre + ' ' + text).toLowerCase();
+    const spammyWordsFound = SPAM_WORDS.filter(w => lowered.includes(w)).slice(0,10);
+
+    // copy-to-image ratio: use textWords vs imagesCount (simple heuristic)
+    // if no textWords -> very image heavy; if many textWords and few images -> good.
+    const copyImageRatio = (textWords + 1) / (imagesCount + 1); // > 20 = text heavy, < 5 = image heavy
+    // alternative: compute image-proportion
+    const htmlBytes = new Blob([html]).size || html.length;
+    const imageSrcBytes = images.reduce((acc, img) => acc + ((img.getAttribute('src')||'').length), 0);
+    const imageByteRatio = imageSrcBytes / (htmlBytes || 1);
+
+    return {
+      text, textChars, textWords,
+      imagesCount, imagesMissingAlt, base64Images, withBg,
+      linkCount, links, uniqueDomains, shortUrlCount,
+      scriptCount, formsCount, inlineJs, mailtoCount,
+      exclamations, numbersCount, allCapsPct,
+      spammyWordsFound, copyImageRatio, imageByteRatio,
+      htmlBytes
+    };
+  }
+
+  function calculateAllCapsPercent(str){
+    if(!str) return 0;
+    const letters = str.replace(/[^A-Za-z]/g,'');
+    if(!letters) return 0;
+    const caps = letters.match(/[A-Z]/g)||[];
+    return Math.round((caps.length / letters.length) * 100);
+  }
+
+  function scoreMetrics(m){
+    // Define weights for each risk factor (sum weights = 1-ish)
+    // Higher penalty = worse for deliverability
+    const weights = {
+      copyImage: 0.20,
+      links: 0.15,
+      domains: 0.10,
+      spamWords: 0.14,
+      subjectSignals: 0.12,
+      imagesMissingAlt: 0.06,
+      base64: 0.06,
+      scriptsForms: 0.07,
+      shortUrls: 0.06
+    };
+
+    let score = 0;
+    const breakdown = [];
+
+    // 1) copy vs images
+    // copyImageScore: if copyImageRatio < 3 -> heavy images; 3-10 moderate; >10 good
+    let copyScore = 0;
+    const r = m.copyImageRatio;
+    if(r < 3) copyScore = 100;
+    else if(r < 6) copyScore = 60;
+    else if(r < 12) copyScore = 25;
+    else copyScore = 0;
+    score += copyScore * weights.copyImage;
+    breakdown.push({name:'Image-heavy content', value: Math.round(copyScore * weights.copyImage), details:`copy/image ratio ${r.toFixed(2)}`});
+
+    // 2) links count
+    let linkScore = 0;
+    if(m.linkCount >= 20) linkScore = 100;
+    else linkScore = Math.min(100, Math.round((m.linkCount / 10) * 100)); // 10 links ~ 100
+    score += linkScore * weights.links;
+    breakdown.push({name:'Many links', value: Math.round(linkScore * weights.links), details: `${m.linkCount} links`});
+
+    // 3) distinct domains
+    let domScore = 0;
+    if(m.uniqueDomains.length >= 6) domScore = 100;
+    else domScore = Math.round((m.uniqueDomains.length / 6) * 100);
+    score += domScore * weights.domains;
+    breakdown.push({name:'Many domains', value: Math.round(domScore * weights.domains), details: `${m.uniqueDomains.length} domains`});
+
+    // 4) spammy words
+    let spamWordsScore = Math.min(100, m.spammyWordsFound.length * 35); // each flagged word heavy
+    score += spamWordsScore * weights.spamWords;
+    breakdown.push({name:'Spammy words', value: Math.round(spamWordsScore * weights.spamWords), details: m.spammyWordsFound.join(', ') || 'none'});
+
+    // 5) subject signals: exclamations, allcaps, numbers
+    let subjScore = 0;
+    subjScore += Math.min(60, m.exclamations * 30); // each ! adds a lot
+    subjScore += Math.min(30, m.allCapsPct); // percent all caps adds up to 30
+    subjScore += Math.min(20, m.numbersCount * 5);
+    subjScore = Math.min(100, subjScore);
+    score += subjScore * weights.subjectSignals;
+    breakdown.push({name:'Subject/preheader signals', value: Math.round(subjScore * weights.subjectSignals), details: `!=${m.exclamations}, ALLCAPS=${m.allCapsPct}%`});
+
+    // 6) images missing alt
+    let altScore = Math.min(100, Math.round((m.imagesMissingAlt / (m.imagesCount || 1)) * 100));
+    score += altScore * weights.imagesMissingAlt;
+    breakdown.push({name:'Images missing alt', value: Math.round(altScore * weights.imagesMissingAlt), details: `${m.imagesMissingAlt}/${m.imagesCount}`});
+
+    // 7) base64 images
+    let b64Score = Math.min(100, Math.round((m.base64Images / (m.imagesCount || 1)) * 100));
+    score += b64Score * weights.base64;
+    breakdown.push({name:'Embedded/base64 images', value: Math.round(b64Score * weights.base64), details: `${m.base64Images}`});
+
+    // 8) scripts/forms
+    let sf = (m.scriptCount + m.formsCount + m.inlineJs);
+    let sfScore = Math.min(100, sf * 40);
+    score += sfScore * weights.scriptsForms;
+    breakdown.push({name:'Scripts or forms', value: Math.round(sfScore * weights.scriptsForms), details: `${m.scriptCount} scripts, ${m.formsCount} forms`});
+
+    // 9) short urls
+    let shortScore = Math.min(100, m.shortUrlCount * 70);
+    score += shortScore * weights.shortUrls;
+    breakdown.push({name:'URL shorteners', value: Math.round(shortScore * weights.shortUrls), details: `${m.shortUrlCount}`});
+
+    // final normalize to 0-100
+    const normalized = Math.round(Math.min(100, score));
+    return {score: normalized, breakdown};
+  }
+
+  function renderResults(m, result){
+    document.getElementById('score').textContent = result.score;
+    const badge = document.getElementById('verdictBadge');
+    if(result.score < 25){ badge.textContent = 'Good'; badge.className='badge ok'; }
+    else if(result.score < 50){ badge.textContent = 'Caution'; badge.className='badge warn'; }
+    else if(result.score < 75){ badge.textContent = 'High Risk'; badge.className='badge danger'; }
+    else { badge.textContent = 'Very High Risk'; badge.className='badge danger'; }
+
+    document.getElementById('copyImageRatio').textContent = m.copyImageRatio.toFixed(2) + ' (words/images)';
+    document.getElementById('linkCount').textContent = m.linkCount;
+    document.getElementById('domainCount').textContent = m.uniqueDomains.length;
+    document.getElementById('missingAlt').textContent = `${m.imagesMissingAlt}`;
+    document.getElementById('base64Count').textContent = `${m.base64Images}`;
+
+    // breakdown list
+    const bd = document.getElementById('breakdown');
+    bd.innerHTML = '';
+    result.breakdown.forEach(b=>{
+      const li = document.createElement('li');
+      li.innerHTML = `<strong>${b.name}</strong> — ${b.value} pts <div class="small muted">${b.details}</div>`;
+      bd.appendChild(li);
+    });
+
+    // domain list
+    const dom = document.getElementById('domainList');
+    dom.innerHTML = '';
+    if(m.uniqueDomains.length === 0) dom.textContent = '(none)';
+    else {
+      m.uniqueDomains.forEach(d=> {
+        const el = document.createElement('div');
+        el.textContent = d;
+        dom.appendChild(el);
+      });
+    }
+
+    // suggestions
+    const sug = document.getElementById('suggestions');
+    sug.innerHTML = '';
+    if(m.copyImageRatio < 3) addSuggestion('Email is image-heavy: add more text copy / include alt text for images.');
+    if(m.linkCount > 10) addSuggestion('Many links: reduce promotional links and consolidate to trusted domains.');
+    if(m.uniqueDomains.length > 4) addSuggestion('Multiple domains: consider consolidating link destinations to fewer trusted domains.');
+    if(m.spammyWordsFound.length) addSuggestion('Remove or soften spammy phrases: ' + m.spammyWordsFound.join(', '));
+    if(m.imagesMissingAlt > 0) addSuggestion('Add descriptive alt attributes to images.');
+    if(m.base64Images > 0) addSuggestion('Avoid embedding images as large base64 strings; use hosted images with proper cache headers.');
+    if(m.inlineJs>0 || m.scriptCount>0) addSuggestion('Remove inline scripts and tracking scripts from email HTML.');
+    if(m.shortUrlCount>0) addSuggestion('Avoid URL shorteners; reveal final destination or use branded links.');
+    function addSuggestion(text){
+      const li = document.createElement('li'); li.innerHTML = `<div>${text}</div>`; sug.appendChild(li);
+    }
+
+    // parsed text preview
+    document.getElementById('parsedText').textContent = m.text || '(no text extracted)';
+  }
+
+  // UI Wiring
+  const fileInput = document.getElementById('file');
+  const htmlInput = document.getElementById('htmlInput');
+  const subjectInput = document.getElementById('subject');
+  const preInput = document.getElementById('preheader');
+  const analyzeBtn = document.getElementById('analyzeBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const pasteHtmlBtn = document.getElementById('pasteHtmlBtn');
+
+  pasteHtmlBtn.addEventListener('click', ()=> {
+    const pasted = prompt('Paste the full HTML of the email here (or Cancel).');
+    if(pasted !== null) htmlInput.value = pasted;
+  });
+
+  fileInput.addEventListener('change', async (ev)=> {
+    const f = ev.target.files && ev.target.files[0];
+    if(!f) return;
+    const text = await f.text();
+    if(f.name.endsWith('.eml')){
+      const html = parseEML(text);
+      htmlInput.value = html;
+    } else {
+      htmlInput.value = text;
+    }
+  });
+
+  analyzeBtn.addEventListener('click', ()=> {
+    const subj = subjectInput.value || '';
+    const pre = preInput.value || '';
+    const html = htmlInput.value || '';
+    if(!subj && !html){
+      alert('Please provide at least a subject line or email HTML (paste or upload a .eml/.html).');
+      return;
+    }
+    const m = extractMetrics(html, subj, pre);
+    const r = scoreMetrics(m);
+    renderResults(m, r);
+  });
+
+  clearBtn.addEventListener('click', ()=> {
+    subjectInput.value = ''; preInput.value = ''; htmlInput.value = ''; fileInput.value = '';
+    document.getElementById('score').textContent = '—';
+    document.getElementById('verdictBadge').textContent = 'No data'; document.getElementById('verdictBadge').className='badge';
+    document.getElementById('breakdown').innerHTML=''; document.getElementById('domainList').textContent='—';
+    document.getElementById('parsedText').textContent='No analysis yet';
+    ['copyImageRatio','linkCount','domainCount','missingAlt','base64Count','spammyWords'].forEach(id=> document.getElementById(id).textContent='—');
+    document.getElementById('suggestions').innerHTML='';
+  });
+
+  // small utility: expose parseEML for file handler
+  function parseEML(eml){ return parseEML_inner(eml); }
+  // embed inner function to avoid hoisting confusion
+  function parseEML_inner(emlText){
+    // implement same as top-level parseEML
+    return (function(){
+      const parser = /content-type:\\s*multipart[\\s\\S]*boundary="?([^"\\r\\n]+)"?/i.exec(emlText);
+      if(parser){
+        const boundary = parser[1];
+        const parts = emlText.split(new RegExp('--' + escapeRegExp(boundary), 'g'));
+        for(const p of parts){
+          if(/content-type:\\s*text\\/html/i.test(p)){
+            const idx = p.indexOf('\\r\\n\\r\\n');
+            if(idx > -1) return p.substring(idx+4);
+            return p;
+          }
+        }
+      }
+      const m = emlText.match(/content-type:.*text\\/html[\\s\\S]*?\\r?\\n\\r?\\n([\\s\\S]*)/i);
+      if(m) return m[1].trim();
+      const idx = emlText.indexOf('\\r\\n\\r\\n');
+      if(idx > -1) return emlText.substring(idx+4).trim();
+      return '';
+    })();
+  }
+
+  // expose for debug (optional)
+  window.__emailSpamTool = {extractMetrics, scoreMetrics};
+
+})();
+</script>
+</body>
+</html>

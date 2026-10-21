@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Duplicate Matcher & Remover</title>
+    <!-- PapaParse for reliable CSV Parsing/Unparsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 30px;
+            background-color: #f4f6f8;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 25px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        h1 { margin-top: 0; color: #1a2b4c; }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .card {
+            border: 1px solid #e0e0e0;
+            padding: 15px;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+        label { font-weight: bold; display: block; margin-bottom: 8px; }
+        input[type="file"] { margin-bottom: 15px; }
+        .mapping-group { margin-top: 10px; }
+        .mapping-group label { font-weight: normal; font-size: 0.9em; margin-bottom: 3px; }
+        select {
+            width: 100%;
+            padding: 6px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+        }
+        button.btn-action {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button.btn-action:hover { background-color: #0052a3; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        /* Popup Modal Styling */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            width: 85%;
+            max-width: 900px;
+            max-height: 85vh;
+            border-radius: 8px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { overflow-y: auto; margin: 15px 0; flex-grow: 1; }
+        .modal-footer { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+        
+        /* Tabs inside Modal */
+        .tab-bar { display: flex; gap: 10px; margin-bottom: 10px; border-bottom: 2px solid #ddd; }
+        .tab-btn {
+            padding: 8px 16px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-weight: bold;
+            color: #666;
+            border-bottom: 3px solid transparent;
+        }
+        .tab-btn.active { color: #0066cc; border-bottom-color: #0066cc; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85em;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th { background-color: #f2f2f2; position: sticky; top: 0; }
+        
+        .btn-download {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-primary { background-color: #28a745; color: white; }
+        .btn-secondary { background-color: #17a2b8; color: white; }
+        .btn-warning { background-color: #ff9900; color: white; }
+        .btn-close { background-color: #6c757d; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>CSV List Duplicate Filter</h1>
+    <p>Upload your Master List and Secondary List to remove matches while keeping all original columns intact.</p>
+
+    <div class="grid">
+        <!-- Master List Panel -->
+        <div class="card">
+            <h3>1. Master List CSV</h3>
+            <input type="file" id="masterFile" accept=".csv">
+            
+            <div class="mapping-group">
+                <label>Email Column:</label>
+                <select id="masterEmailCol" disabled></select>
+                
+                <label>First Name Column:</label>
+                <select id="masterFirstCol" disabled></select>
+                
+                <label>Last Name Column:</label>
+                <select id="masterLastCol" disabled></select>
+            </div>
+        </div>
+
+        <!-- Secondary List Panel -->
+        <div class="card">
+            <h3>2. Secondary List CSV</h3>
+            <input type="file" id="secondaryFile" accept=".csv">
+            
+            <div class="mapping-group">
+                <label>Email Column:</label>
+                <select id="secEmailCol" disabled></select>
+                
+                <label>First Name Column:</label>
+                <select id="secFirstCol" disabled></select>
+                
+                <label>Last Name Column:</label>
+                <select id="secLastCol" disabled></select>
+            </div>
+        </div>
+    </div>
+
+    <button id="processBtn" class="btn-action" disabled onclick="processLists()">Find & Remove Matching Records</button>
+</div>
+
+<!-- Popup Modal -->
+<div class="modal-overlay" id="resultsModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Matching & Reconciliation Summary</h2>
+        </div>
+        <div class="modal-body">
+            <p id="summaryText"></p>
+            
+            <div class="tab-bar">
+                <button class="tab-btn active" id="tabMatchesBtn" onclick="switchTab('matches')">Removed Master Matches</button>
+                <button class="tab-btn" id="tabUnmatchedBtn" onclick="switchTab('unmatched')">Unmatched Secondary Records</button>
+            </div>
+
+            <div style="overflow-x:auto;">
+                <table id="matchesTable">
+                    <thead><tr id="tableHeader"></tr></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-download btn-secondary" onclick="downloadCSV('matches')">Download Removed Matches CSV</button>
+            <button class="btn-download btn-warning" onclick="downloadCSV('unmatched')">Download Unmatched Secondary CSV</button>
+            <button class="btn-download btn-primary" onclick="downloadCSV('cleaned')">Download Cleaned Master List CSV</button>
+            <button class="btn-download btn-close" onclick="closeModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let masterData = [];
+    let secondaryData = [];
+    let masterHeaders = [];
+    let secondaryHeaders = [];
+
+    let cleanedMasterList = [];
+    let removedMatchesList = [];
+    let unmatchedSecondaryList = [];
+
+    let activeTab = 'matches';
+
+    // Setup Event Listeners for File Uploads
+    document.getElementById('masterFile').addEventListener('change', (e) => handleFileSelect(e, 'master'));
+    document.getElementById('secondaryFile').addEventListener('change', (e) => handleFileSelect(e, 'secondary'));
+
+    function handleFileSelect(event, type) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                if (type === 'master') {
+                    masterData = results.data;
+                    masterHeaders = results.meta.fields;
+                    populateDropdowns('master', masterHeaders);
+                } else {
+                    secondaryData = results.data;
+                    secondaryHeaders = results.meta.fields;
+                    populateDropdowns('sec', secondaryHeaders);
+                }
+                checkReady();
+            }
+        });
+    }
+
+    function populateDropdowns(prefix, headers) {
+        const emailSelect = document.getElementById(`${prefix}EmailCol`);
+        const firstSelect = document.getElementById(`${prefix}FirstCol`);
+        const lastSelect = document.getElementById(`${prefix}LastCol`);
+
+        [emailSelect, firstSelect, lastSelect].forEach(select => {
+            select.innerHTML = '<option value="">-- Select Column --</option>';
+            select.disabled = false;
+        });
+
+        headers.forEach(header => {
+            const cleanHeader = header.trim().toLowerCase();
+            
+            emailSelect.add(new Option(header, header));
+            firstSelect.add(new Option(header, header));
+            lastSelect.add(new Option(header, header));
+
+            if (cleanHeader.includes('email')) emailSelect.value = header;
+            if (cleanHeader.includes('first') || cleanHeader.includes('fname')) firstSelect.value = header;
+            if (cleanHeader.includes('last') || cleanHeader.includes('lname')) lastSelect.value = header;
+        });
+    }
+
+    function checkReady() {
+        if (masterData.length > 0 && secondaryData.length > 0) {
+            document.getElementById('processBtn').disabled = false;
+        }
+    }
+
+    function sanitize(val) {
+        return val ? String(val).trim().toLowerCase() : '';
+    }
+
+    function processLists() {
+        const mEmail = document.getElementById('masterEmailCol').value;
+        const mFirst = document.getElementById('masterFirstCol').value;
+        const mLast = document.getElementById('masterLastCol').value;
+
+        const sEmail = document.getElementById('secEmailCol').value;
+        const sFirst = document.getElementById('secFirstCol').value;
+        const sLast = document.getElementById('secLastCol').value;
+
+        // Build Master List Lookup Sets to find unmatched secondary items
+        const masterEmails = new Set();
+        const masterNames = new Set();
+
+        masterData.forEach(row => {
+            const email = sanitize(row[mEmail]);
+            const first = sanitize(row[mFirst]);
+            const last = sanitize(row[mLast]);
+
+            if (email) masterEmails.add(email);
+            if (first && last) masterNames.add(`${first}|${last}`);
+        });
+
+        // Build Secondary List Lookup Sets
+        const secEmails = new Set();
+        const secNames = new Set();
+
+        secondaryData.forEach(row => {
+            const email = sanitize(row[sEmail]);
+            const first = sanitize(row[sFirst]);
+            const last = sanitize(row[sLast]);
+
+            if (email) secEmails.add(email);
+            if (first && last) secNames.add(`${first}|${last}`);
+        });
+
+        // 1. Process Master List (Identify matches to remove)
+        cleanedMasterList = [];
+        removedMatchesList = [];
+
+        masterData.forEach(row => {
+            const email = sanitize(row[mEmail]);
+            const first = sanitize(row[mFirst]);
+            const last = sanitize(row[mLast]);
+            const fullName = (first && last) ? `${first}|${last}` : null;
+
+            let isMatch = false;
+
+            if (email && secEmails.has(email)) {
+                isMatch = true;
+            } else if (fullName && secNames.has(fullName)) {
+                isMatch = true;
+            }
+
+            if (isMatch) {
+                removedMatchesList.push(row);
+            } else {
+                cleanedMasterList.push(row);
+            }
+        });
+
+        // 2. Identify Secondary List records that did NOT match any master records
+        unmatchedSecondaryList = [];
+
+        secondaryData.forEach(row => {
+            const email = sanitize(row[sEmail]);
+            const first = sanitize(row[sFirst]);
+            const last = sanitize(row[sLast]);
+            const fullName = (first && last) ? `${first}|${last}` : null;
+
+            let isMatch = false;
+
+            if (email && masterEmails.has(email)) {
+                isMatch = true;
+            } else if (fullName && masterNames.has(fullName)) {
+                isMatch = true;
+            }
+
+            if (!isMatch) {
+                unmatchedSecondaryList.push(row);
+            }
+        });
+
+        showModal();
+    }
+
+    function showModal() {
+        document.getElementById('summaryText').innerHTML = 
+            `<b>Master List:</b> Analyzed ${masterData.length} rows | Removed <b>${removedMatchesList.length}</b> matches | Clean Master remaining: <b>${cleanedMasterList.length}</b><br>` +
+            `<b>Secondary List:</b> Analyzed ${secondaryData.length} rows | <b>${unmatchedSecondaryList.length}</b> rows had no match in Master List.`;
+
+        switchTab('matches');
+        document.getElementById('resultsModal').style.display = 'flex';
+    }
+
+    function switchTab(tab) {
+        activeTab = tab;
+        document.getElementById('tabMatchesBtn').className = `tab-btn ${tab === 'matches' ? 'active' : ''}`;
+        document.getElementById('tabUnmatchedBtn').className = `tab-btn ${tab === 'unmatched' ? 'active' : ''}`;
+        
+        renderTable();
+    }
+
+    function renderTable() {
+        const headerTr = document.getElementById('tableHeader');
+        const bodyTbody = document.getElementById('tableBody');
+        headerTr.innerHTML = '';
+        bodyTbody.innerHTML = '';
+
+        const dataToDisplay = (activeTab === 'matches') ? removedMatchesList : unmatchedSecondaryList;
+        const headersToDisplay = (activeTab === 'matches') ? masterHeaders : secondaryHeaders;
+
+        if (dataToDisplay.length === 0) {
+            bodyTbody.innerHTML = `<tr><td colspan="100%" style="text-align:center;">No ${activeTab === 'matches' ? 'duplicate matches' : 'unmatched secondary records'} found.</td></tr>`;
+            return;
+        }
+
+        // Render Headers
+        headersToDisplay.forEach(header => {
+            const th = document.createElement('th');
+            th.textContent = header;
+            headerTr.appendChild(th);
+        });
+
+        // Render up to 50 records preview
+        const previewLimit = Math.min(dataToDisplay.length, 50);
+        for (let i = 0; i < previewLimit; i++) {
+            const tr = document.createElement('tr');
+            headersToDisplay.forEach(header => {
+                const td = document.createElement('td');
+                td.textContent = dataToDisplay[i][header] || '';
+                tr.appendChild(td);
+            });
+            bodyTbody.appendChild(tr);
+        }
+
+        if (dataToDisplay.length > 50) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="${headersToDisplay.length}" style="text-align:center; font-style:italic;">...and ${dataToDisplay.length - 50} more records. Download the CSV below to view all.</td>`;
+            bodyTbody.appendChild(tr);
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('resultsModal').style.display = 'none';
+    }
+
+    function downloadCSV(type) {
+        let dataToExport = [];
+        let headersToExport = [];
+        let fileName = '';
+
+        if (type === 'cleaned') {
+            dataToExport = cleanedMasterList;
+            headersToExport = masterHeaders;
+            fileName = 'Cleaned_Master_List.csv';
+        } else if (type === 'matches') {
+            dataToExport = removedMatchesList;
+            headersToExport = masterHeaders;
+            fileName = 'Removed_Master_Matches.csv';
+        } else if (type === 'unmatched') {
+            dataToExport = unmatchedSecondaryList;
+            headersToExport = secondaryHeaders;
+            fileName = 'Unmatched_Secondary_Records.csv';
+        }
+
+        if (dataToExport.length === 0) {
+            alert('No records to download for this file.');
+            return;
+        }
+
+        const csv = Papa.unparse({
+            fields: headersToExport,
+            data: dataToExport
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', fileName);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
+
+</body>
+</html>

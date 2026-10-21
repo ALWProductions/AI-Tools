@@ -1,0 +1,8 @@
+{
+  "name": "Affinity Email Versioner & Component Library",
+  "description": "Enterprise tool for versioning healthcare emails. Features dynamic regional foundation management for CHI, Dignity, and Mountain divisions, drag-and-drop division transfers, reusable component libraries, image dimension resizing (width, height, max-width, max-height), image hyperlink management, and automated branding preservation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

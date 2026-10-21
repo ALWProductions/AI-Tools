@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Spreadsheet Processing Tool V3.2</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; background-color: #f8fafc; line-height: 1.6; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 24px; background-color: white; min-height: 100vh; }
+        .header { margin-bottom: 32px; }
+        .title { font-size: 2rem; font-weight: bold; color: #1a202c; margin-bottom: 8px; }
+        .version { color: #3182ce; font-weight: 600; }
+        .subtitle { color: #718096; }
+        .privacy-notice { background-color: #e6fffa; border: 1px solid #81e6d9; border-radius: 8px; padding: 12px; margin-bottom: 24px; }
+        .privacy-text { color: #234e52; font-size: 0.875rem; display: flex; align-items: center; }
+        .upload-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 32px; }
+        .upload-area { border: 2px dashed #cbd5e0; border-radius: 8px; padding: 40px; text-align: center; cursor: pointer; transition: border-color 0.3s; background-color: #fff; }
+        .upload-area:hover { border-color: #3182ce; }
+        .upload-text { font-size: 1rem; color: #4a5568; margin-bottom: 4px; font-weight: 500; }
+        .file-name { margin-top: 8px; font-size: 0.875rem; font-weight: 600; color: #38a169; }
+        .message { padding: 16px; border-radius: 8px; margin-bottom: 24px; display: flex; align-items: center; font-weight: 500; }
+        .message-success { background-color: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; }
+        .operations { background-color: #f7fafc; border-radius: 8px; padding: 24px; margin-bottom: 32px; border: 1px solid #e2e8f0; }
+        .operation-card { background-color: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; max-width: 500px; }
+        .select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.875rem; margin-bottom: 12px; }
+        .button { padding: 10px 20px; border: none; border-radius: 4px; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; }
+        .button-blue { background-color: #2563eb; color: white; }
+        .button-blue:hover { background-color: #1d4ed8; }
+        .button-green { background-color: #16a34a; color: white; }
+        .button-gray { background-color: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+        .preview-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+        .preview-content { background-color: white; border-radius: 12px; max-width: 1100px; width: 100%; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+        .preview-header { padding: 20px 24px; border-bottom: 1px solid #e5e7eb; background-color: #fffbeb; }
+        .preview-body { padding: 0; overflow-y: auto; flex: 1; }
+        .preview-footer { padding: 20px 24px; border-top: 1px solid #e5e7eb; background-color: #f9fafb; display: flex; justify-content: flex-end; gap: 12px; }
+        .table { width: 100%; border-collapse: collapse; text-align: left; }
+        .table th { position: sticky; top: 0; background: #f8fafc; padding: 12px 16px; font-size: 0.75rem; text-transform: uppercase; color: #64748b; border-bottom: 2px solid #e2e8f0; }
+        .table td { padding: 10px 16px; border-bottom: 1px solid #f1f5f9; font-size: 0.875rem; }
+        .provider-group-header { background-color: #f1f5f9; font-weight: 700; color: #334155; padding: 8px 16px; font-size: 0.75rem; text-transform: uppercase; border-left: 4px solid #3b82f6; }
+        .manual-fix-header { background-color: #fef2f2; font-weight: 700; color: #991b1b; padding: 8px 16px; font-size: 0.75rem; text-transform: uppercase; border-left: 4px solid #ef4444; }
+        .input-inline { padding: 4px 8px; border: 1px solid #cbd5e0; border-radius: 4px; width: 100%; font-family: monospace; font-size: 0.8rem; }
+        .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.7); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useCallback, useMemo } = React;
+        
+        const SpreadsheetTool = () => {
+            const [masterData, setMasterData] = useState(null);
+            const [masterFileName, setMasterFileName] = useState('');
+            const [message, setMessage] = useState('');
+            const [showPreview, setShowPreview] = useState(false);
+            const [emailColumn, setEmailColumn] = useState('');
+            const [emailCorrections, setEmailCorrections] = useState([]);
+            const [processedData, setProcessedData] = useState(null);
+
+            // Updated Mapping list including Cox, AT&T, NMRK, etc.
+            const domainMappings = [
+                { provider: 'Gmail', pattern: /@(g[ma]{1,2}il|gamil|gmial|gmaul)(\.[a-z]{0,2})?$/i, correction: 'gmail.com' },
+                { provider: 'Yahoo', pattern: /@(yaho{1,3}|yahho)(\.[a-z]{0,2})?$/i, correction: 'yahoo.com' },
+                { provider: 'Hotmail', pattern: /@(hotm[ia]{1,2}l|hotmale)(\.[a-z]{0,2})?$/i, correction: 'hotmail.com' },
+                { provider: 'Outlook', pattern: /@(outl[o0]{1,2}k|outlook)(\.[a-z]{0,2})?$/i, correction: 'outlook.com' },
+                { provider: 'Cox', pattern: /@cox(\.[a-z]{0,2})?$/i, correction: 'cox.net' },
+                { provider: 'AT&T', pattern: /@att(\.[a-z]{0,2})?$/i, correction: 'att.net' },
+                { provider: 'NMRK', pattern: /@nmrk(\.[a-z]{0,2})?$/i, correction: 'nmrk.com' },
+                { provider: 'NetworkUS', pattern: /@networkus(\.[a-z]{0,2})?$/i, correction: 'networkus.com' },
+                { provider: 'MSN', pattern: /@msn(\.[a-z]{0,2})?$/i, correction: 'msn.com' },
+                { provider: 'Live', pattern: /@live(\.[a-z]{0,2})?$/i, correction: 'live.com' },
+                { provider: 'Comcast', pattern: /@comcast(\.[a-z]{0,2})?$/i, correction: 'comcast.net' },
+                { provider: 'Verizon', pattern: /@verizon(\.[a-z]{0,2})?$/i, correction: 'verizon.net' },
+                { provider: 'Optonline', pattern: /@optonine(\.[a-z]{0,2})?$/i, correction: 'optonline.net' },
+                { provider: 'Embarqmail', pattern: /@embarqmail(\.[a-z]{0,2})?$/i, correction: 'embarqmail.com' },
+                { provider: 'Apple (Mac)', pattern: /@mac(\.[a-z]{0,2})?$/i, correction: 'mac.com' },
+                { provider: 'Apple (Me)', pattern: /@me(\.[a-z]{0,2})?$/i, correction: 'me.com' },
+                { provider: 'AOL', pattern: /@(ao|aol)(\.[a-z]{0,2})?$/i, correction: 'aol.com' }
+            ];
+
+            const parseFile = async (file) => {
+                const reader = new FileReader();
+                return new Promise((resolve) => {
+                    reader.onload = (e) => {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        const headers = jsonData[0];
+                        const rows = jsonData.slice(1).map((row, index) => {
+                            const obj = { _originalIndex: index };
+                            headers.forEach((h, i) => { obj[h] = row[i] || ''; });
+                            return obj;
+                        });
+                        resolve({ headers, rows });
+                    };
+                    reader.readAsArrayBuffer(file);
+                });
+            };
+
+            const findIssues = () => {
+                if (!masterData || !emailColumn) return setMessage('Please select the email column.');
+                const issues = [];
+                masterData.rows.forEach((row, index) => {
+                    const email = String(row[emailColumn]).toLowerCase().trim();
+                    if (!email || !email.includes('@')) return;
+
+                    let matched = false;
+                    for (const m of domainMappings) {
+                        if (m.pattern.test(email)) {
+                            const corrected = email.replace(/@.*$/, `@${m.correction}`);
+                            if (corrected !== email) {
+                                issues.push({ index, provider: m.provider, original: row[emailColumn], corrected, selected: true, type: 'auto' });
+                            }
+                            matched = true;
+                            break;
+                        }
+                    }
+
+                    // Catch-all: Identify any domain that doesn't have a dot + extension (e.g. @test, @test.)
+                    if (!matched) {
+                        const domainPart = email.split('@')[1] || '';
+                        if (!domainPart.includes('.') || domainPart.endsWith('.')) {
+                            issues.push({ index, provider: 'Needs Manual Correction', original: row[emailColumn], corrected: row[emailColumn], selected: true, type: 'manual' });
+                        }
+                    }
+                });
+
+                if (issues.length === 0) return setMessage('No domain issues found.');
+                setEmailCorrections(issues);
+                setShowPreview(true);
+            };
+
+            const handleManualEdit = (id, val) => {
+                const next = [...emailCorrections];
+                next[id].corrected = val;
+                setEmailCorrections(next);
+            };
+
+            const applyFixes = () => {
+                const updatedRows = [...masterData.rows];
+                emailCorrections.filter(c => c.selected).forEach(c => {
+                    updatedRows[c.index][emailColumn] = c.corrected;
+                });
+                setProcessedData({ ...masterData, rows: updatedRows });
+                setShowPreview(false);
+                setMessage('Fixes applied successfully.');
+            };
+
+            const grouped = useMemo(() => {
+                return emailCorrections.reduce((acc, curr) => {
+                    if (!acc[curr.provider]) acc[curr.provider] = [];
+                    acc[curr.provider].push(curr);
+                    return acc;
+                }, {});
+            }, [emailCorrections]);
+
+            const download = () => {
+                const ws = XLSX.utils.json_to_sheet(processedData.rows.map(({_originalIndex, ...r}) => r));
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Cleaned Data');
+                XLSX.writeFile(wb, `Cleaned_${masterFileName}`);
+            };
+
+            return (
+                <div className="container">
+                    <div className="header">
+                        <h1 className="title">Spreadsheet Domain Fixer <span className="version">V2</span></h1>
+                        <p className="subtitle">Automated corrections for common providers and manual review for unclosed domains</p>
+                    </div>
+
+                    <div className="upload-grid">
+                        <div className="upload-area" onClick={() => document.getElementById('mu').click()}>
+                            <input type="file" id="mu" className="hidden" onChange={async e => {
+                                const res = await parseFile(e.target.files[0]);
+                                setMasterData(res);
+                                setMasterFileName(e.target.files[0].name);
+                            }} />
+                            <p className="upload-text">{masterFileName ? `File: ${masterFileName}` : 'Click to Upload Master Spreadsheet'}</p>
+                        </div>
+                    </div>
+
+                    {message && <div className="message message-success"><span>✅</span> {message}</div>}
+
+                    {masterData && (
+                        <div className="operations">
+                            <div className="operation-card">
+                                <h3 style={{marginBottom:'12px'}}>Identify Email Domain Issues</h3>
+                                <select className="select" onChange={e => setEmailColumn(e.target.value)}>
+                                    <option value="">Select Email Column...</option>
+                                    {masterData.headers.map(h => <option key={h} value={h}>{h}</option>)}
+                                </select>
+                                <button className="button button-blue" onClick={findIssues}>Scan for Errors</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {showPreview && (
+                        <div className="preview-modal">
+                            <div className="preview-content">
+                                <div className="preview-header">
+                                    <h2 style={{fontSize:'1.25rem', color:'#92400e'}}>Review Identified Issues</h2>
+                                    <p style={{fontSize:'0.875rem', color:'#b45309'}}>Check auto-suggestions or manually fix "unclosed" domains below.</p>
+                                </div>
+                                <div className="preview-body">
+                                    <table className="table">
+                                        <thead>
+                                            <tr>
+                                                <th style={{width:'50px'}}>Apply</th>
+                                                <th>Current Value</th>
+                                                <th>Correction / New Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {Object.entries(grouped).map(([group, items]) => (
+                                                <React.Fragment key={group}>
+                                                    <tr>
+                                                        <td colSpan="3" className={group === 'Needs Manual Correction' ? 'manual-fix-header' : 'provider-group-header'}>
+                                                            {group} ({items.length} items)
+                                                        </td>
+                                                    </tr>
+                                                    {items.map((c) => {
+                                                        const globalIndex = emailCorrections.findIndex(x => x.index === c.index);
+                                                        return (
+                                                            <tr key={c.index}>
+                                                                <td>
+                                                                    <input type="checkbox" checked={c.selected} onChange={() => {
+                                                                        const next = [...emailCorrections];
+                                                                        next[globalIndex].selected = !next[globalIndex].selected;
+                                                                        setEmailCorrections(next);
+                                                                    }} />
+                                                                </td>
+                                                                <td><code style={{color:'#64748b'}}>{c.original}</code></td>
+                                                                <td>
+                                                                    <input 
+                                                                        type="text" 
+                                                                        className="input-inline" 
+                                                                        value={c.corrected} 
+                                                                        onChange={(e) => handleManualEdit(globalIndex, e.target.value)}
+                                                                        style={c.type === 'manual' ? {borderColor:'#ef4444'} : {}}
+                                                                    />
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </React.Fragment>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="preview-footer">
+                                    <button className="button button-gray" onClick={() => setShowPreview(false)}>Cancel</button>
+                                    <button className="button button-green" onClick={applyFixes}>Apply All Selected</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {processedData && (
+                        <div className="results">
+                            <div className="results-header" style={{padding:'20px', display:'flex', justifyContent:'space-between', alignItems:'center', background:'#f8fafc', border:'1px solid #e2e8f0', borderTopLeftRadius:'8px', borderTopRightRadius:'8px'}}>
+                                <h3 style={{fontSize:'1rem'}}>Fixed Data Preview</h3>
+                                <button className="button button-green" onClick={download}>📥 Download Processed Excel</button>
+                            </div>
+                            <div className="table-container" style={{border:'1px solid #e2e8f0', borderTop:'none'}}>
+                                <table className="table">
+                                    <thead><tr>{processedData.headers.map(h => <th key={h}>{h}</th>)}</tr></thead>
+                                    <tbody>
+                                        {processedData.rows.slice(0, 5).map((r, i) => (
+                                            <tr key={i}>{processedData.headers.map(h => <td key={h}>{String(r[h])}</td>)}</tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                <p style={{padding:'10px', fontSize:'0.75rem', color:'#64748b', textAlign:'center'}}>Showing first 5 rows of {processedData.rows.length} records</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        ReactDOM.render(<SpreadsheetTool />, document.getElementById('root'));
+    </script>
+</body>
+</html>

@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Email Testing &amp; Optimization Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #d9d9d9;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: #000000;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 5px;
+        }
+
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(550px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .tool-card {
+            background: #ffffff;
+            border-radius: 0px;
+            padding: 30px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+
+        .tool-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 8px;
+            transition: background-color 0.3s ease;
+        }
+
+        .tool-header:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .tool-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #000000;
+        }
+
+        .toggle-btn {
+            background: #555555;
+            color: #ffffff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .tool-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tool-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 15px;
+            width: 100%;
+        }
+
+        .file-input {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 12px 20px;
+            background: #000000;
+            color: #ffffff;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .file-input-label:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 1px solid #999999;
+            border-radius: 0px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.9em;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+            margin-bottom: 15px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #000000;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+        }
+
+        .analyze-btn {
+            background: #555555;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+        }
+
+        .analyze-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .results {
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-item {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #28a745;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .result-item.warning {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+
+        .result-item.error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .result-item.info {
+            border-left-color: #17a2b8;
+            background: #d1ecf1;
+        }
+
+        .result-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #888888;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #000000;
+        }
+
+        .checkbox-group {
+            display: block;
+            gap: 25px;
+            margin-bottom: 35px;
+        }
+
+        .checkbox-item {
+            display: block;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            transform: scale(1.5);
+        }
+
+        .optimization-preview {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.85em;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            margin-top: 15px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #eeeeee;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 1em;
+            color: #888888;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .tab.active {
+            color: #444444;
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #444444;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .loading {
+            text-align: center;
+            color: #000000;
+            font-style: italic;
+        }
+
+        .copy-btn {
+            background: #555555;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            float: right;
+            margin-bottom: 10px;
+        }
+
+        .copy-btn:hover {
+            background: #000000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>HTML Email Testing &amp; Optimization Tool</h1>
+            <p>Comprehensive email testing, optimization, and validation suite</p>
+        </div>
+
+        <div class="tool-grid">
+            <!-- Link Checker Tool -->
+            <div class="tool-card">
+                <div class="tool-header" onclick="toggleTool('linkChecker')">
+                    <div class="tool-title">Link Checker &amp; Validator</div>
+                    <button class="toggle-btn">&#8595;</button>
+                </div>
+                <div id="linkChecker" class="tool-content">
+                    <div class="input-group">
+                        <label class="input-label">Upload HTML/Email File:</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="linkFile" class="file-input" accept=".html,.htm,.eml">
+                            <label for="linkFile" class="file-input-label">Choose File</label>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Expected Links (one per line):</label>
+                        <textarea id="expectedLinks" placeholder="https://example.com/page1&#10;https://example.com/page2&#10;mailto:contact@example.com"></textarea>
+                    </div>
+                    <button class="analyze-btn" onclick="checkLinks()">Analyze Links</button>
+                    <div id="linkResults"></div>
+                </div>
+            </div>
+
+            <!-- Copy Comparison Tool -->
+            <div class="tool-card">
+                <div class="tool-header" onclick="toggleTool('copyChecker')">
+                    <div class="tool-title">Copy Comparison Tool</div>
+                    <button class="toggle-btn">&#8595;</button>
+                </div>
+                <div id="copyChecker" class="tool-content">
+                    <div class="tabs">
+                        <button class="tab active" onclick="switchTab('copyFile', this)">File Upload</button>
+                        <button class="tab" onclick="switchTab('copyText', this)">Text Input</button>
+                    </div>
+                    <div id="copyFile" class="tab-content active">
+                        <div class="input-group">
+                            <label class="input-label">Upload HTML/Email File:</label>
+                            <div class="file-input-wrapper">
+                                <input type="file" id="copyHtmlFile" class="file-input" accept=".html,.htm,.eml">
+                                <label for="copyHtmlFile" class="file-input-label">Choose HTML File</label>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Upload Reference File:</label>
+                            <div class="file-input-wrapper">
+                                <input type="file" id="copyRefFile" class="file-input" accept=".txt,.html,.htm,.eml">
+                                <label for="copyRefFile" class="file-input-label">Choose Reference File</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="copyText" class="tab-content">
+                        <div class="input-group">
+                            <label class="input-label">HTML/Email Content:</label>
+                            <textarea id="htmlContent" placeholder="Paste your HTML content here..."></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Reference Text:</label>
+                            <textarea id="referenceText" placeholder="Paste your reference text here..."></textarea>
+                        </div>
+                    </div>
+                    <button class="analyze-btn" onclick="compareCopy()">Compare Copy</button>
+                    <div id="copyResults"></div>
+                </div>
+            </div>
+
+            <!-- Alt Text Tool -->
+            <div class="tool-card">
+                <div class="tool-header" onclick="toggleTool('altTextTool')">
+                    <div class="tool-title">Alt Text Generator &amp; Checker</div>
+                    <button class="toggle-btn">&#8595;</button>
+                </div>
+                <div id="altTextTool" class="tool-content">
+                    <div class="input-group">
+                        <label class="input-label">Upload HTML/Email File:</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="altTextFile" class="file-input" accept=".html,.htm,.eml">
+                            <label for="altTextFile" class="file-input-label">Choose File</label>
+                        </div>
+                    </div>
+                    <button class="analyze-btn" onclick="analyzeAltText()">Analyze Alt Text</button>
+                    <div id="altTextResults"></div>
+                </div>
+            </div>
+
+            <!-- HTML Optimization Tool -->
+            <div class="tool-card">
+                <div class="tool-header" onclick="toggleTool('optimizationTool')">
+                    <div class="tool-title">HTML Email Optimizer</div>
+                    <button class="toggle-btn">&#8595;</button>
+                </div>
+                <div id="optimizationTool" class="tool-content">
+                    <div class="input-group">
+                        <label class="input-label">Upload HTML File:</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="optimizeFile" class="file-input" accept=".html,.htm">
+                            <label for="optimizeFile" class="file-input-label">Choose File</label>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Optimization Options:</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="checkBrokenCode" checked>
+                                <label for="checkBrokenCode">Check Broken Code</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="optimizeHTML" checked>
+                                <label for="optimizeHTML">Optimize HTML</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="addDarkMode" checked>
+                                <label for="addDarkMode">Add Dark Mode</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="improveInlineCSS" checked>
+                                <label for="improveInlineCSS">Improve Inline CSS</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="outlookCompatibility" checked>
+                                <label for="outlookCompatibility">Outlook Compatibility</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="gmailCompatibility" checked>
+                                <label for="gmailCompatibility">Gmail Compatibility</label>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="analyze-btn" onclick="optimizeHTML()">Optimize HTML</button>
+                    <div id="optimizationResults"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentHtmlContent = '';
+
+        function toggleTool(toolId) {
+            const tool = document.getElementById(toolId);
+            tool.classList.toggle('active');
+        }
+
+        function switchTab(tabId, button) {
+            // Remove active class from all tabs and contents
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked tab and corresponding content
+            button.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        function readFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+
+        function stripHtmlTags(html) {
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            return div.textContent || div.innerText || '';
+        }
+
+        function extractLinks(html) {
+            const linkRegex = /href\s*=\s*["']([^"']+)["']/gi;
+            const links = [];
+            let match;
+            while ((match = linkRegex.exec(html)) !== null) {
+                links.push(match[1]);
+            }
+            return links;
+        }
+
+        function extractImages(html) {
+            const imgRegex = /<img[^>]+>/gi;
+            const images = [];
+            let match;
+            while ((match = imgRegex.exec(html)) !== null) {
+                const src = /src\s*=\s*["']([^"']+)["']/i.exec(match[0]);
+                const alt = /alt\s*=\s*["']([^"']*)["']/i.exec(match[0]);
+                images.push({
+                    tag: match[0],
+                    src: src ? src[1] : '',
+                    alt: alt ? alt[1] : null
+                });
+            }
+            return images;
+        }
+
+        async function checkLinks() {
+            const fileInput = document.getElementById('linkFile');
+            const expectedLinksText = document.getElementById('expectedLinks').value;
+            const resultsDiv = document.getElementById('linkResults');
+            
+            if (!fileInput.files[0] && !expectedLinksText) {
+                resultsDiv.innerHTML = '<div class="result-item error"><div class="result-title">Error</div>Please upload a file or enter expected links.</div>';
+                return;
+            }
+
+            resultsDiv.innerHTML = '<div class="loading">Analyzing links...</div>';
+            
+            try {
+                let htmlContent = '';
+                if (fileInput.files[0]) {
+                    htmlContent = await readFile(fileInput.files[0]);
+                }
+                
+                const foundLinks = extractLinks(htmlContent);
+                const expectedLinks = expectedLinksText.split('\n').filter(link => link.trim());
+                
+                let results = '<div class="results">';
+                results += '<div class="result-title">Link Analysis Results</div>';
+                
+                // Found links
+                results += '<div class="result-item info">';
+                results += '<div class="result-title">Found Links (' + foundLinks.length + ')</div>';
+                if (foundLinks.length > 0) {
+                    results += '<ul>';
+                    foundLinks.forEach(link => {
+                        results += '<li>' + link + '</li>';
+                    });
+                    results += '</ul>';
+                } else {
+                    results += 'No links found in the HTML content.';
+                }
+                results += '</div>';
+                
+                // Missing expected links
+                if (expectedLinks.length > 0) {
+                    const missingLinks = expectedLinks.filter(expected => 
+                        !foundLinks.some(found => found.includes(expected) || expected.includes(found))
+                    );
+                    
+                    if (missingLinks.length > 0) {
+                        results += '<div class="result-item warning">';
+                        results += '<div class="result-title">Missing Expected Links (' + missingLinks.length + ')</div>';
+                        results += '<ul>';
+                        missingLinks.forEach(link => {
+                            results += '<li>' + link + '</li>';
+                        });
+                        results += '</ul>';
+                        results += '</div>';
+                    } else {
+                        results += '<div class="result-item">';
+                        results += '<div class="result-title">All Expected Links Found</div>';
+                        results += '</div>';
+                    }
+                }
+                
+                // Potentially broken links
+                const suspiciousLinks = foundLinks.filter(link => 
+                    link.includes('localhost') || 
+                    link.includes('127.0.0.1') ||
+                    link.includes('example.com') ||
+                    link.startsWith('#') ||
+                    !link.includes('.')
+                );
+                
+                if (suspiciousLinks.length > 0) {
+                    results += '<div class="result-item warning">';
+                    results += '<div class="result-title">Potentially Problematic Links</div>';
+                    results += '<ul>';
+                    suspiciousLinks.forEach(link => {
+                        results += '<li>' + link + ' (may need updating)</li>';
+                    });
+                    results += '</ul>';
+                    results += '</div>';
+                }
+                
+                results += '</div>';
+                resultsDiv.innerHTML = results;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = '<div class="result-item error"><div class="result-title">Error</div>' + error.message + '</div>';
+            }
+        }
+
+        async function compareCopy() {
+            const resultsDiv = document.getElementById('copyResults');
+            let htmlContent = '';
+            let referenceContent = '';
+            
+            // Get content from active tab
+            if (document.getElementById('copyFile').classList.contains('active')) {
+                const htmlFile = document.getElementById('copyHtmlFile').files[0];
+                const refFile = document.getElementById('copyRefFile').files[0];
+                
+                if (!htmlFile || !refFile) {
+                    resultsDiv.innerHTML = '<div class="result-item error"><div class="result-title">Error</div>Please upload both files.</div>';
+                    return;
+                }
+                
+                htmlContent = await readFile(htmlFile);
+                referenceContent = await readFile(refFile);
+            } else {
+                htmlContent = document.getElementById('htmlContent').value;
+                referenceContent = document.getElementById('referenceText').value;
+                
+                if (!htmlContent || !referenceContent) {
+                    resultsDiv.innerHTML = '<div class="result-item error"><div class="result-title">Error</div>Please provide both HTML content and reference text.</div>';
+                    return;
+                }
+            }
+            
+            resultsDiv.innerHTML = '<div class="loading">Comparing content...</div>';
+            
+            try {
+                const htmlText = stripHtmlTags(htmlContent).toLowerCase().replace(/\s+/g, ' ').trim();
+                const refText = referenceContent.toLowerCase().replace(/\s+/g, ' ').trim();
+                
+                // Simple word-based comparison
+                const htmlWords = htmlText.split(' ');
+                const refWords = refText.split(' ');
+                
+                const missingWords = refWords.filter(word => !htmlWords.includes(word));
+                const extraWords = htmlWords.filter(word => !refWords.includes(word));
+                
+                let results = '<div class="results">';
+                results += '<div class="result-title">Copy Comparison Results</div>';
+                
+                // Similarity score
+                const commonWords = refWords.filter(word => htmlWords.includes(word));
+                const similarity = Math.round((commonWords.length / Math.max(refWords.length, htmlWords.length)) * 100);
+                
+                results += '<div class="result-item info">';
+                results += '<div class="result-title">Similarity Score: ' + similarity + '%</div>';
+                results += '</div>';
+                
+                // Missing words from reference
+                if (missingWords.length > 0) {
+                    results += '<div class="result-item warning">';
+                    results += '<div class="result-title">Missing from HTML (' + missingWords.length + ' words)</div>';
+                    results += missingWords.slice(0, 20).join(', ');
+                    if (missingWords.length > 20) results += '... and ' + (missingWords.length - 20) + ' more';
+                    results += '</div>';
+                }
+                
+                // Extra words in HTML
+                if (extraWords.length > 0) {
+                    results += '<div class="result-item info">';
+                    results += '<div class="result-title">Extra in HTML (' + extraWords.length + ' words)</div>';
+                    results += extraWords.slice(0, 20).join(', ');
+                    if (extraWords.length > 20) results += '... and ' + (extraWords.length - 20) + ' more';
+                    results += '</div>';
+                }
+                
+                if (missingWords.length === 0 && extraWords.length === 0) {
+                    results += '<div class="result-item">';
+                    results += '<div class="result-title">Perfect Match</div>';
+                    results += 'The HTML content matches the reference text exactly.';
+                    results += '</div>';
+                }
+                
+                results += '</div>';
+                resultsDiv.innerHTML = results;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = '<div class="result-item error"><div class="result-title">Error</div>' + error.message + '</div>';
+            }
+        }
+
+        async function analyzeAltText() {
+            const fileInput = document.getElementById('altTextFile');
+            const resultsDiv = document.getElementById('altTextResults');
+            
+            if (!fileInput.files[0]) {
+                resultsDiv.innerHTML = '<div class="result-item error"><div class="result-title">Error</div>Please upload an HTML file.</div>';
+                return;
+            }
+
+            resultsDiv.innerHTML = '<div class="loading">Analyzing alt text...</div>';
+            
+            try {
+                const htmlContent = await readFile(fileInput.files[0]);
+                const images = extractImages(htmlContent);
+                
+                let results = '<div class="results">';
+                results += '<div class="result-title">Alt Text Analysis Results</div>';
+                
+                results += '<div class="result-item info">';
+                results += '<div class="result-title">Total Images Found: ' + images.length + '</div>';
+                results += '</div>';
+                
+                const missingAlt = images.filter(img => !img.alt);
+                const emptyAlt = images.filter(img => img.alt === '');
+                const hasAlt = images.filter(img => img.alt && img.alt.length > 0);
+                
+                // Missing alt text
+                if (missingAlt.length > 0) {
+                    results += '<div class="result-item error">';
+                    results += '<div class="result-title">Missing Alt Text (' + missingAlt.length + ' images)</div>';
+                    missingAlt.forEach((img, index) => {
+                        const fileName = img.src.split('/').pop() || 'Unknown';
+                        results += '<div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">';
+                        results += '<strong>Image ' + (index + 1) + ':</strong> ' + fileName + '<br>';
+                        results += '<code style="background: #e9ecef; padding: 2px 4px; border-radius: 2px;">' + img.tag + '</code><br>';
+                        results += '<strong>Suggested alt text:</strong> ' + generateAltText(img.src, fileName);
+                        results += '</div>';
+                    });
+                    results += '</div>';
+                }
+                
+                // Empty alt text
+                if (emptyAlt.length > 0) {
+                    results += '<div class="result-item warning">';
+                    results += '<div class="result-title">Empty Alt Text (' + emptyAlt.length + ' images)</div>';
+                    emptyAlt.forEach((img, index) => {
+                        const fileName = img.src.split('/').pop() || 'Unknown';
+                        results += '<div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">';
+                        results += '<strong>Image ' + (index + 1) + ':</strong> ' + fileName + '<br>';
+                        results += '<strong>Suggested alt text:</strong> ' + generateAltText(img.src, fileName);
+                        results += '</div>';
+                    });
+                    results += '</div>';
+                }
+                
+                // Images with alt text
+                if (hasAlt.length > 0) {
+                    results += '<div class="result-item">';
+                    results += '<div class="result-title">Images with Alt Text (' + hasAlt.length + ')</div>';
+                    hasAlt.forEach((img, index) => {
+                        const fileName = img.src.split('/').pop() || 'Unknown';
+                        const altQuality = evaluateAltTextQuality(img.alt);
+                        results += '<div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">';
+                        results += '<strong>Image ' + (index + 1) + ':</strong> ' + fileName + '<br>';
+                        results += '<strong>Current alt:</strong> "' + img.alt + '"<br>';
+                        results += '<strong>Quality:</strong> ' + altQuality.score + '/10 - ' + altQuality.feedback;
+                        if (altQuality.score < 7) {
+                            results += '<br><strong>Suggested improvement:</strong> ' + improveAltText(img.alt, img.src, fileName);
+                        }
+                        results += '</div>';
+                    });
+                    results += '</div>';
+                }
+                
+                if (images.length === 0) {
+                    results += '<div class="result-item info">';
+                    results += '<div class="result-title">No Images Found</div>';
+                    results += 'No images were found in the uploaded HTML file.';
+                    results += '</div>';
+                }
+                
+                results += '</div>';
+                resultsDiv.innerHTML = results;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = '<div class="result-item error"><div class="result-title">Error</div>' + error.message + '</div>';
+            }
+        }
+
+        function generateAltText(src, fileName) {
+            // Simple alt text generation based on filename and src patterns
+            const cleanFileName = fileName.replace(/\.[^/.]+$/, "").replace(/[-_]/g, ' ');
+            
+            if (src.includes('logo')) return 'Company logo';
+            if (src.includes('banner') || src.includes('header')) return 'Header banner image';
+            if (src.includes('product')) return 'Product image: ' + cleanFileName;
+            if (src.includes('icon')) return cleanFileName + ' icon';
+            if (src.includes('button')) return cleanFileName + ' button';
+            if (src.includes('social')) return 'Social media icon';
+            
+            // Capitalize first letter and return
+            return cleanFileName.charAt(0).toUpperCase() + cleanFileName.slice(1);
+        }
+
+        function evaluateAltTextQuality(altText) {
+            let score = 10;
+            let feedback = 'Excellent alt text';
+            
+            if (!altText || altText.length === 0) {
+                return { score: 0, feedback: 'No alt text provided' };
+            }
+            
+            if (altText.length < 5) {
+                score -= 3;
+                feedback = 'Too short - should be more descriptive';
+            }
+            
+            if (altText.length > 125) {
+                score -= 2;
+                feedback = 'Too long - should be more concise';
+            }
+            
+            if (altText.toLowerCase().includes('image') || altText.toLowerCase().includes('picture')) {
+                score -= 2;
+                feedback = 'Avoid using "image" or "picture" in alt text';
+            }
+            
+            if (altText === altText.toLowerCase() || altText === altText.toUpperCase()) {
+                score -= 1;
+                feedback = 'Consider proper capitalization';
+            }
+            
+            return { score: Math.max(0, score), feedback };
+        }
+
+        function improveAltText(currentAlt, src, fileName) {
+            const suggestions = [];
+            
+            if (currentAlt.toLowerCase().includes('image')) {
+                suggestions.push('Remove "image" from description');
+            }
+            
+            if (currentAlt.length < 5) {
+                suggestions.push('Add more descriptive details');
+            }
+            
+            if (currentAlt.length > 125) {
+                suggestions.push('Make more concise');
+            }
+            
+            // Generate improved version
+            let improved = currentAlt.replace(/\b(image|picture|photo)\b/gi, '').trim();
+            if (improved.length < 5) {
+                improved = generateAltText(src, fileName);
+            }
+            
+            return improved;
+        }
+
+        async function optimizeHTML() {
+            const fileInput = document.getElementById('optimizeFile');
+            const resultsDiv = document.getElementById('optimizationResults');
+            
+            if (!fileInput.files[0]) {
+                resultsDiv.innerHTML = '<div class="result-item error"><div class="result-title">Error</div>Please upload an HTML file.</div>';
+                return;
+            }
+
+            resultsDiv.innerHTML = '<div class="loading">Optimizing HTML...</div>';
+            
+            try {
+                const htmlContent = await readFile(fileInput.files[0]);
+                currentHtmlContent = htmlContent;
+                
+                const options = {
+                    checkBrokenCode: document.getElementById('checkBrokenCode').checked,
+                    optimizeHTML: document.getElementById('optimizeHTML').checked,
+                    addDarkMode: document.getElementById('addDarkMode').checked,
+                    improveInlineCSS: document.getElementById('improveInlineCSS').checked,
+                    outlookCompatibility: document.getElementById('outlookCompatibility').checked,
+                    gmailCompatibility: document.getElementById('gmailCompatibility').checked
+                };
+                
+                let results = '<div class="results">';
+                results += '<div class="result-title">HTML Optimization Results</div>';
+                
+                let optimizedHTML = htmlContent;
+                const issues = [];
+                
+                // Check for broken code
+                if (options.checkBrokenCode) {
+                    const brokenCodeIssues = checkBrokenCode(htmlContent);
+                    if (brokenCodeIssues.length > 0) {
+                        results += '<div class="result-item error">';
+                        results += '<div class="result-title">Broken Code Issues Found (' + brokenCodeIssues.length + ')</div>';
+                        brokenCodeIssues.forEach(issue => {
+                            results += '<div>• ' + issue + '</div>';
+                        });
+                        results += '</div>';
+                    } else {
+                        results += '<div class="result-item">';
+                        results += '<div class="result-title">No Broken Code Issues Found</div>';
+                        results += '</div>';
+                    }
+                }
+                
+                // Optimize HTML
+                if (options.optimizeHTML) {
+                    optimizedHTML = optimizeHTMLCode(optimizedHTML);
+                    results += '<div class="result-item">';
+                    results += '<div class="result-title">HTML Optimized</div>';
+                    results += 'Removed unnecessary whitespace, optimized structure, and improved performance.';
+                    results += '</div>';
+                }
+                
+                // Add dark mode support
+                if (options.addDarkMode) {
+                    optimizedHTML = addDarkModeSupport(optimizedHTML);
+                    results += '<div class="result-item">';
+                    results += '<div class="result-title">Dark Mode Support Added</div>';
+                    results += 'Added CSS media queries for dark mode compatibility.';
+                    results += '</div>';
+                }
+                
+                // Improve inline CSS
+                if (options.improveInlineCSS) {
+                    optimizedHTML = improveInlineStyles(optimizedHTML);
+                    results += '<div class="result-item">';
+                    results += '<div class="result-title">Inline CSS Improved</div>';
+                    results += 'Enhanced inline styles for better email client compatibility.';
+                    results += '</div>';
+                }
+                
+                // Outlook compatibility
+                if (options.outlookCompatibility) {
+                    optimizedHTML = addOutlookCompatibility(optimizedHTML);
+                    results += '<div class="result-item">';
+                    results += '<div class="result-title">Outlook Compatibility Enhanced</div>';
+                    results += 'Added MSO conditionals and Outlook-specific fixes.';
+                    results += '</div>';
+                }
+                
+                // Gmail compatibility
+                if (options.gmailCompatibility) {
+                    optimizedHTML = addGmailCompatibility(optimizedHTML);
+                    results += '<div class="result-item">';
+                    results += '<div class="result-title">Gmail Compatibility Enhanced</div>';
+                    results += 'Added Gmail-specific optimizations and fixes.';
+                    results += '</div>';
+                }
+                
+                // Show optimized code
+                results += '<div class="result-item info">';
+                results += '<div class="result-title">Optimized HTML Code</div>';
+                results += '<button class="copy-btn" onclick="copyToClipboard(\'optimizedCode\')">Copy Code</button>';
+                results += '<div id="optimizedCode" class="optimization-preview">' + escapeHtml(optimizedHTML) + '</div>';
+                results += '</div>';
+                
+                results += '</div>';
+                resultsDiv.innerHTML = results;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = '<div class="result-item error"><div class="result-title">Error</div>' + error.message + '</div>';
+            }
+        }
+
+        function checkBrokenCode(html) {
+            const issues = [];
+            
+            // Check for unclosed tags
+            const openTags = html.match(/<[^\/][^>]*>/g) || [];
+            const closeTags = html.match(/<\/[^>]*>/g) || [];
+            
+            if (openTags.length !== closeTags.length) {
+                issues.push('Mismatched opening and closing tags detected');
+            }
+            
+            // Check for common HTML issues
+            if (html.includes('<img') && !html.includes('alt=')) {
+                issues.push('Images without alt attributes found');
+            }
+            
+            if (html.includes('style=') && html.includes('!important')) {
+                issues.push('!important declarations found - may cause issues in email clients');
+            }
+            
+            if (html.includes('<script')) {
+                issues.push('JavaScript detected - not supported in most email clients');
+            }
+            
+            if (html.includes('position: absolute') || html.includes('position: fixed')) {
+                issues.push('Absolute/fixed positioning detected - not reliable in email clients');
+            }
+            
+            return issues;
+        }
+
+        function optimizeHTMLCode(html) {
+            // Remove comments
+            html = html.replace(/<!--[\s\S]*?-->/g, '');
+            
+            // Remove extra whitespace
+            html = html.replace(/\s+/g, ' ').replace(/>\s+</g, '><');
+            
+            // Ensure table-based structure for email compatibility
+            if (!html.includes('<table')) {
+                html = html.replace(/<body[^>]*>/, '<body>\\n<table width="100%" cellpadding="0" cellspacing="0" border="0">\\n<tr><td>');
+                html = html.replace(/<\/body>/, '</td></tr>\\n</table>\\n</body>');
+            }
+            
+            return html;
+        }
+
+        function addDarkModeSupport(html) {
+            const darkModeCSS = `
+    /* Dark mode styles */
+    @media (prefers-color-scheme: dark) {
+        .email-container { background-color: #1a1a1a !important; color: #ffffff !important; }
+        .email-content { background-color: #2d2d2d !important; color: #ffffff !important; }
+        .email-header { background-color: #333333 !important; color: #ffffff !important; }
+        .email-footer { background-color: #333333 !important; color: #cccccc !important; }
+        a { color: #66b3ff !important; }
+    }
+    
+    /* Dark mode for Outlook */
+    [data-ogsc] .email-container { background-color: #1a1a1a !important; color: #ffffff !important; }
+    [data-ogsc] .email-content { background-color: #2d2d2d !important; color: #ffffff !important; }
+            `.trim();
+            
+            if (html.includes('<style')) {
+                html = html.replace(/<\/style>/, darkModeCSS + '\\n</style>');
+            } else {
+                html = html.replace(/<\/head>/, '<style type="text/css">\\n' + darkModeCSS + '\\n</style>\\n</head>');
+            }
+            
+            return html;
+        }
+
+        function improveInlineStyles(html) {
+            // Add common email-safe inline styles
+            html = html.replace(/<table(?![^>]*style=)/g, '<table style="border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt;"');
+            html = html.replace(/<td(?![^>]*style=)/g, '<td style="border-collapse: collapse; mso-line-height-rule: exactly;"');
+            html = html.replace(/<img(?![^>]*style=)/g, '<img style="display: block; border: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic;"');
+            
+            return html;
+        }
+
+        function addOutlookCompatibility(html) {
+            // Add Outlook-specific conditionals
+            const outlookFixes = `
+    <!--[if mso]>
+    <style type="text/css">
+        .email-container { width: 600px !important; }
+        table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        td { border-collapse: collapse; mso-line-height-rule: exactly; }
+    </style>
+    <![endif]-->
+            `.trim();
+            
+            html = html.replace(/<\/head>/, outlookFixes + '\\n</head>');
+            
+            // Add MSO-specific attributes
+            html = html.replace(/<table/g, '<table role="presentation"');
+            
+            return html;
+        }
+
+        function addGmailCompatibility(html) {
+            // Gmail-specific optimizations
+            html = html.replace(/<style[^>]*>/g, '<style type="text/css">\\n/* Gmail compatibility */\\n.gmail-fix { display: none !important; }\\n');
+            
+            // Add Gmail-safe CSS reset
+            const gmailReset = `
+    /* Gmail CSS Reset */
+    u + .body .gmail-fix { display: none !important; }
+    .gmail-mobile-forced-width { width: 100% !important; }
+            `.trim();
+            
+            if (html.includes('<style')) {
+                html = html.replace(/<\/style>/, gmailReset + '\\n</style>');
+            }
+            
+            return html;
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent || element.innerText;
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => {
+                    const btn = element.parentElement.querySelector('.copy-btn');
+                    const originalText = btn.textContent;
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                    }, 2000);
+                });
+            } else {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                const btn = element.parentElement.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            }
+        }
+
+        // Initialize tools as collapsed by default
+        document.addEventListener('DOMContentLoaded', function() {
+            // All tools start collapsed, so no initialization needed
+        });
+    </script>
+</body>
+</html>
