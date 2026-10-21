@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Build Time Calculator</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --border-color: #e2e8f0;
+            --danger-color: #ef4444;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .calculator-container {
+            background-color: var(--card-bg);
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            width: 100%;
+            max-width: 750px;
+        }
+
+        h1 {
+            margin-top: 0;
+            color: var(--text-color);
+            font-size: 1.75rem;
+            margin-bottom: 8px;
+        }
+
+        .instructions {
+            color: #64748b;
+            font-size: 0.95rem;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .formula-info {
+            background-color: #eff6ff;
+            border-left: 4px solid var(--primary-color);
+            padding: 12px 16px;
+            border-radius: 0 6px 6px 0;
+            font-size: 0.875rem;
+            color: #1e40af;
+            margin-bottom: 24px;
+        }
+
+        .row-header {
+            display: grid;
+            grid-template-columns: 2fr 2fr 2fr 40px;
+            gap: 12px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #475569;
+            margin-bottom: 8px;
+            padding: 0 4px;
+        }
+
+        .email-row {
+            display: grid;
+            grid-template-columns: 2fr 2fr 2fr 40px;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 0.95rem;
+        }
+
+        input[type="number"]:focus {
+            outline: 2px solid var(--primary-color);
+            border-color: transparent;
+        }
+
+        .row-estimate {
+            font-weight: 500;
+            font-size: 0.95rem;
+            color: #334155;
+            padding-left: 4px;
+        }
+
+        .btn {
+            cursor: pointer;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .btn-add {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            margin-top: 8px;
+        }
+
+        .btn-add:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-remove {
+            background-color: transparent;
+            color: #94a3b8;
+            font-size: 1.25rem;
+            height: 38px;
+            width: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-remove:hover {
+            color: var(--danger-color);
+            background-color: #fef2f2;
+        }
+
+        .summary-card {
+            margin-top: 32px;
+            padding: 20px;
+            background-color: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .summary-card h2 {
+            margin: 0 0 16px 0;
+            font-size: 1.2rem;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 12px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-top: 4px;
+        }
+
+        .sub-text {
+            font-size: 0.8rem;
+            color: #64748b;
+            font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+
+<div class="calculator-container">
+    <h1>Email Build Time Calculator</h1>
+    <p class="instructions">
+        Add email variations below. Specify how many emails share the same segment count to estimate total build time.
+    </p>
+
+    <div class="formula-info">
+        <strong>Formula Rule:</strong> 
+        Base email = 1 hr. Additional segments = +0.5 hrs each.<br>
+        <em>Example: 1 email with 3 segments (1 base + 2 additional) = 2.0 hours.</em>
+    </div>
+
+    <div class="row-header">
+        <div>Number of Emails</div>
+        <div>Segments per Email</div>
+        <div>Estimated Time</div>
+        <div></div>
+    </div>
+
+    <div id="rows-container">
+        <!-- Dynamic rows will be inserted here -->
+    </div>
+
+    <button type="button" class="btn btn-add" id="add-row-btn">+ Add Email Group</button>
+
+    <div class="summary-card">
+        <h2>Total Estimate</h2>
+        <div class="summary-grid">
+            <div class="stat-box">
+                <div class="stat-label">Total Emails</div>
+                <div class="stat-value" id="total-emails">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Total Segments</div>
+                <div class="stat-value" id="total-segments">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Total Estimated Time</div>
+                <div class="stat-value" id="total-hours">0 <span class="sub-text">hrs</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const rowsContainer = document.getElementById('rows-container');
+    const addRowBtn = document.getElementById('add-row-btn');
+
+    // Default initial row data
+    const initialRows = [
+        { emails: 1, segments: 1 }, // 1 email with 1 segment = 1 hour
+        { emails: 1, segments: 3 }  // 1 email with 3 segments = 2 hours
+    ];
+
+    function calculateRowHours(emails, segments) {
+        if (emails <= 0) return 0;
+        // 1 segment = 0 additional segments (1 hour)
+        // >1 segment = 1 + (segments - 1) * 0.5 hours
+        const additionalSegments = Math.max(0, segments - 1);
+        const singleEmailHours = 1 + (additionalSegments * 0.5);
+        return emails * singleEmailHours;
+    }
+
+    function createRow(emails = 1, segments = 1) {
+        const row = document.createElement('div');
+        row.className = 'email-row';
+
+        row.innerHTML = `
+            <div>
+                <input type="number" class="input-emails" min="1" value="${emails}" placeholder="e.g. 1">
+            </div>
+            <div>
+                <input type="number" class="input-segments" min="1" value="${segments}" placeholder="e.g. 3">
+            </div>
+            <div class="row-estimate">0 hrs</div>
+            <button class="btn btn-remove" title="Remove row">&times;</button>
+        `;
+
+        // Event Listeners for inputs
+        const inputs = row.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('input', updateCalculations);
+        });
+
+        // Event Listener for remove button
+        row.querySelector('.btn-remove').addEventListener('click', () => {
+            row.remove();
+            updateCalculations();
+        });
+
+        rowsContainer.appendChild(row);
+    }
+
+    function updateCalculations() {
+        const rows = rowsContainer.querySelectorAll('.email-row');
+        let totalEmails = 0;
+        let totalSegments = 0;
+        let totalHours = 0;
+
+        rows.forEach(row => {
+            const emailInput = row.querySelector('.input-emails');
+            const segmentInput = row.querySelector('.input-segments');
+            const rowEstimateDisplay = row.querySelector('.row-estimate');
+
+            const emails = parseInt(emailInput.value) || 0;
+            const segments = parseInt(segmentInput.value) || 0;
+
+            const rowHours = calculateRowHours(emails, segments);
+            
+            // Format row output
+            rowEstimateDisplay.textContent = `${rowHours} hrs`;
+
+            // Update running totals
+            totalEmails += emails;
+            totalSegments += (emails * segments);
+            totalHours += rowHours;
+        });
+
+        // Update overall summary DOM elements
+        document.getElementById('total-emails').textContent = totalEmails;
+        document.getElementById('total-segments').textContent = totalSegments;
+        document.getElementById('total-hours').innerHTML = `${totalHours} <span class="sub-text">hrs</span>`;
+    }
+
+    // Initialize with default rows
+    initialRows.forEach(data => createRow(data.emails, data.segments));
+    updateCalculations();
+
+    // Add row button listener
+    addRowBtn.addEventListener('click', () => {
+        createRow(1, 1);
+        updateCalculations();
+    });
+</script>
+
+</body>
+</html>

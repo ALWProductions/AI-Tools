@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSV Account Splitter</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 650px;
+      margin: 40px auto;
+      padding: 20px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    h2 { margin-top: 0; color: #333; }
+    .input-group { margin: 20px 0; }
+    input[type="file"] { margin-bottom: 10px; }
+    button {
+      background-color: #0066cc;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      font-size: 14px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:disabled { background-color: #cccccc; cursor: not-allowed; }
+    #status { margin-top: 15px; font-weight: bold; color: #333; }
+    ul { margin-top: 10px; max-height: 200px; overflow-y: auto; padding-left: 20px; }
+  </style>
+</head>
+<body>
+
+  <h2>CSV Splitter by account_name</h2>
+  <p>Upload your CSV file to split it into separate CSV files based on unique values in the <strong>account_name</strong> column.</p>
+
+  <div class="input-group">
+    <input type="file" id="csvFile" accept=".csv" />
+  </div>
+
+  <button id="splitBtn" onclick="processCSV()">Split & Download All CSVs</button>
+
+  <div id="status"></div>
+  <ul id="fileList"></ul>
+
+  <script>
+    // CSV Parser that handles quoted values containing commas or newlines
+    function parseCSVLine(text) {
+      let result = [];
+      let cell = '';
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        let c = text[i];
+        if (c === '"') {
+          if (inQuotes && text[i+1] === '"') {
+            cell += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (c === ',' && !inQuotes) {
+          result.push(cell);
+          cell = '';
+        } else {
+          cell += c;
+        }
+      }
+      result.push(cell);
+      return result;
+    }
+
+    function processCSV() {
+      const fileInput = document.getElementById('csvFile');
+      const statusDiv = document.getElementById('status');
+      const fileList = document.getElementById('fileList');
+      
+      statusDiv.textContent = '';
+      fileList.innerHTML = '';
+
+      if (!fileInput.files.length) {
+        alert('Please select a CSV file first.');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        const text = e.target.result;
+        const lines = text.split(/\r\n|\n/);
+        
+        if (lines.length === 0 || !lines[0].trim()) {
+          statusDiv.textContent = 'Error: The selected file is empty.';
+          return;
+        }
+
+        const headerRaw = lines[0];
+        const headers = parseCSVLine(headerRaw).map(h => h.trim().replace(/^"|"$/g, ''));
+        
+        // Locate account_name column (case-insensitive search)
+        const accountNameIndex = headers.findIndex(h => h.toLowerCase() === 'account_name');
+
+        if (accountNameIndex === -1) {
+          statusDiv.style.color = 'red';
+          statusDiv.textContent = 'Error: Could not find "account_name" column header in the CSV.';
+          return;
+        }
+
+        const groups = {};
+
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i];
+          if (!line.trim()) continue;
+
+          const row = parseCSVLine(line);
+          let accountName = row[accountNameIndex] ? row[accountNameIndex].trim().replace(/^"|"$/g, '') : 'Unassigned';
+          
+          // Sanitize file name characters
+          accountName = accountName.replace(/[/\\?%*:|"<>]/g, '_') || 'Unassigned';
+
+          if (!groups[accountName]) {
+            groups[accountName] = [];
+          }
+          groups[accountName].push(line);
+        }
+
+        const keys = Object.keys(groups);
+        if (keys.length === 0) {
+          statusDiv.textContent = 'No data rows found to process.';
+          return;
+        }
+
+        statusDiv.style.color = 'green';
+        statusDiv.textContent = `Successfully split into ${keys.length} file(s):`;
+
+        // Generate files and trigger browser downloads
+        keys.forEach((accountName, index) => {
+          const content = [headerRaw, ...groups[accountName]].join('\n');
+          const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          
+          const fileName = `${accountName}.csv`;
+          
+          const li = document.createElement('li');
+          li.textContent = fileName;
+          fileList.appendChild(li);
+
+          // Stagger download triggers slightly to avoid browser pop-up blocking
+          setTimeout(() => {
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }, index * 200);
+        });
+      };
+
+      reader.readAsText(file);
+    }
+  </script>
+</body>
+</html>
